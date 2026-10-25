@@ -112,7 +112,11 @@ func (e Env) Diagnose(ctx context.Context, host string) (*types.DiagnoseResult, 
 			m := map[string]any{}
 			for _, k := range cs {
 				if k.Error != nil {
-					return nil, fmt.Errorf("attribute %d (%s): %s", k.Attribute, k.Name, k.Error.Message)
+					// The device answered and refused the attribute (OpENer's
+					// Connection Manager instance has none): a refusal, not an
+					// internal error.
+					return nil, errs.New(errs.KindRefused, k.Error.Code,
+						fmt.Sprintf("attribute %d (%s): %s", k.Attribute, k.Name, k.Error.Message), nil)
 				}
 				m[k.Name] = *k.Value
 			}
