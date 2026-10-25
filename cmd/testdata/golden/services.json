@@ -1,0 +1,13 @@
+{
+  "count": 1,
+  "services": [
+    {
+      "capabilities": 288,
+      "name": "Communications",
+      "tcp": true,
+      "udp": true,
+      "version": 1
+    }
+  ],
+  "target": "ADDR"
+}

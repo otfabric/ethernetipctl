@@ -1,0 +1,93 @@
+{
+  "checks": [
+    {
+      "detail": {
+        "address": "ADDR"
+      },
+      "duration_ms": "<dynamic>",
+      "name": "tcp-connect",
+      "status": "ok"
+    },
+    {
+      "detail": {
+        "session": "<dynamic>"
+      },
+      "duration_ms": "<dynamic>",
+      "name": "register-session",
+      "status": "ok"
+    },
+    {
+      "detail": {
+        "product_name": "test adapter",
+        "revision": "3.7",
+        "state": "operational",
+        "status": "",
+        "vendor_id": 1
+      },
+      "duration_ms": "<dynamic>",
+      "name": "list-identity",
+      "status": "ok"
+    },
+    {
+      "detail": {
+        "services": "Communications"
+      },
+      "duration_ms": "<dynamic>",
+      "name": "list-services",
+      "status": "ok"
+    },
+    {
+      "detail": {
+        "product_code": 42,
+        "product_name": "test adapter",
+        "serial_number": "0x12345678"
+      },
+      "duration_ms": "<dynamic>",
+      "name": "identity",
+      "status": "ok"
+    },
+    {
+      "detail": {
+        "gateway": "0.0.0.0",
+        "ip": "127.0.0.1",
+        "mask": "0.0.0.0",
+        "status": 1
+      },
+      "duration_ms": "<dynamic>",
+      "name": "tcpip-interface",
+      "status": "ok"
+    },
+    {
+      "detail": {
+        "full_duplex": false,
+        "link_active": true,
+        "mac": "00:00:00:00:00:00",
+        "speed_mbps": 100
+      },
+      "duration_ms": "<dynamic>",
+      "name": "ethernet-link",
+      "status": "ok"
+    },
+    {
+      "detail": {
+        "close_format_rejects": 0,
+        "close_other_rejects": 0,
+        "close_requests": 2,
+        "connection_timeouts": 0,
+        "open_format_rejects": 0,
+        "open_other_rejects": 0,
+        "open_requests": 2,
+        "open_resource_rejects": 0
+      },
+      "duration_ms": "<dynamic>",
+      "name": "connection-manager",
+      "status": "ok"
+    }
+  ],
+  "duration_ms": "<dynamic>",
+  "failed": 0,
+  "ok": true,
+  "passed": 8,
+  "skipped": 0,
+  "target": "ADDR"
+}

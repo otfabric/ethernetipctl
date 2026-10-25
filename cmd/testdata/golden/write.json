@@ -1,0 +1,15 @@
+{
+  "attribute": 13,
+  "class": 245,
+  "class_name": "TCP/IP Interface",
+  "connected": false,
+  "data": "3c00",
+  "instance": 1,
+  "length": 2,
+  "path": "@245/1/13",
+  "rtt_ms": "<dynamic>",
+  "service": "Set_Attribute_Single",
+  "target": "ADDR",
+  "type": "UINT",
+  "value": 60
+}

@@ -1,0 +1,20 @@
+{
+  "closed": true,
+  "connection": {
+    "class": 1,
+    "connection_serial": "<dynamic>",
+    "originator_serial": "<dynamic>",
+    "originator_vendor": 65535,
+    "ot_connection_id": "<dynamic>",
+    "ot_rpi_ms": 10,
+    "path": "[class 0x04] [instance 151] [point 150] [point 100]",
+    "to_connection_id": "<dynamic>",
+    "to_rpi_ms": 10
+  },
+  "ot_size": 38,
+  "rtt_ms": "<dynamic>",
+  "service": "Forward_Open",
+  "target": "ADDR",
+  "to_size": 34,
+  "transport": "class 1 cyclic"
+}

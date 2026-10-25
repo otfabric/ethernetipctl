@@ -1,0 +1,150 @@
+{
+  "assemblies": [
+    {
+      "instance": 100,
+      "members": 1,
+      "name": "Input",
+      "number": 100,
+      "size": 32
+    },
+    {
+      "instance": 150,
+      "members": 1,
+      "name": "Output",
+      "number": 150,
+      "size": 32
+    },
+    {
+      "instance": 151,
+      "members": 5,
+      "name": "Configuration",
+      "number": 151,
+      "size": 10
+    },
+    {
+      "instance": 152,
+      "members": 0,
+      "name": "Input only heartbeat",
+      "number": 152,
+      "size": 0
+    },
+    {
+      "instance": 153,
+      "members": 0,
+      "name": "Listen only heartbeat",
+      "number": 153,
+      "size": 0
+    }
+  ],
+  "connections": [
+    {
+      "class": 1,
+      "name": "Exclusive owner",
+      "number": 1,
+      "ot_rpi": "Param1",
+      "ot_size": "32",
+      "path": "[class 0x04] [instance 151] [point 150] [point 100]",
+      "to_rpi": "Param1",
+      "to_size": "32"
+    },
+    {
+      "class": 1,
+      "name": "Input only",
+      "number": 2,
+      "ot_rpi": "Param1",
+      "ot_size": "0",
+      "path": "[class 0x04] [instance 151] [point 152] [point 100]",
+      "to_rpi": "Param1",
+      "to_size": "32"
+    },
+    {
+      "class": 1,
+      "name": "Listen only",
+      "number": 3,
+      "ot_rpi": "Param1",
+      "ot_size": "0",
+      "path": "[class 0x04] [instance 151] [point 153] [point 100]",
+      "to_rpi": "Param1",
+      "to_size": "32"
+    }
+  ],
+  "device": {
+    "catalog": "OTF-EIP-1",
+    "device_type": 12,
+    "product_code": 42,
+    "product_name": "e2e adapter",
+    "revision": "3.7",
+    "type_name": "Communications Adapter",
+    "vendor_id": 65535,
+    "vendor_name": "OT Fabric"
+  },
+  "errors": 0,
+  "file": "../testdata/otfabric_adapter.eds",
+  "params": [
+    {
+      "default": "10000",
+      "enum_values": 0,
+      "max": "3600000000",
+      "min": "1000",
+      "name": "RPI",
+      "number": 1,
+      "size": 4,
+      "type": "UDINT",
+      "units": "us"
+    },
+    {
+      "default": "1500",
+      "enum_values": 0,
+      "max": "3000",
+      "min": "0",
+      "name": "Speed setpoint",
+      "number": 2,
+      "size": 2,
+      "type": "UINT",
+      "units": "rpm"
+    },
+    {
+      "default": "0",
+      "enum_values": 3,
+      "max": "2",
+      "min": "0",
+      "name": "Mode",
+      "number": 3,
+      "size": 1,
+      "type": "SINT",
+      "units": ""
+    },
+    {
+      "default": "20",
+      "enum_values": 0,
+      "max": "125",
+      "min": "-40",
+      "name": "Temperature",
+      "number": 4,
+      "size": 4,
+      "type": "REAL",
+      "units": "degC"
+    },
+    {
+      "default": "0",
+      "enum_values": 0,
+      "max": "0",
+      "min": "0",
+      "name": "Padding",
+      "number": 5,
+      "size": 1,
+      "type": "USINT",
+      "units": ""
+    }
+  ],
+  "sections": [
+    "File",
+    "Device",
+    "Device Classification",
+    "Params",
+    "Assembly",
+    "Connection Manager",
+    "Port"
+  ],
+  "warnings": 0
+}

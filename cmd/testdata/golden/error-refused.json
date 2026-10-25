@@ -1,0 +1,8 @@
+{
+  "error": {
+    "cip_status": 20,
+    "code": "attribute_not_supported",
+    "kind": "refused",
+    "message": "the target refused the request: Get_Attribute_Single @1/1/99: attribute not supported (0x14)"
+  }
+}

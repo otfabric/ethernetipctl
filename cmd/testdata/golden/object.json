@@ -1,0 +1,40 @@
+{
+  "class": 1,
+  "class_attributes": [
+    {
+      "attribute": 1,
+      "data": "0100",
+      "name": "revision",
+      "value": 1
+    },
+    {
+      "attribute": 2,
+      "data": "0100",
+      "name": "max_instance",
+      "value": 1
+    },
+    {
+      "attribute": 3,
+      "data": "0100",
+      "name": "number_of_instances",
+      "value": 1
+    },
+    {
+      "attribute": 6,
+      "data": "0700",
+      "name": "max_class_attribute",
+      "value": 7
+    },
+    {
+      "attribute": 7,
+      "data": "0800",
+      "name": "max_instance_attribute",
+      "value": 8
+    }
+  ],
+  "class_name": "Identity",
+  "connected": false,
+  "instance": 1,
+  "instance_data": "01000c002a0003070000785634120c746573742061646170746572",
+  "target": "ADDR"
+}

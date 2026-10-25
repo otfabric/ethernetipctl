@@ -1,0 +1,36 @@
+{
+  "duration_ms": "<dynamic>",
+  "identity": {
+    "device_type": 12,
+    "device_type_name": "Communications Adapter",
+    "extended_device_status": 0,
+    "product_code": 42,
+    "product_name": "test adapter",
+    "revision": "3.7",
+    "serial_number": 305419896,
+    "status": 0,
+    "status_flags": "",
+    "vendor_id": 1,
+    "vendor_name": "Rockwell Automation/Allen-Bradley"
+  },
+  "list_identity": {
+    "identity": {
+      "device_type": 12,
+      "device_type_name": "Communications Adapter",
+      "extended_device_status": 0,
+      "product_code": 42,
+      "product_name": "test adapter",
+      "revision": "3.7",
+      "serial_number": 305419896,
+      "state": 3,
+      "state_name": "operational",
+      "status": 0,
+      "status_flags": "",
+      "vendor_id": 1,
+      "vendor_name": "Rockwell Automation/Allen-Bradley"
+    },
+    "protocol_version": 1,
+    "socket": "ADDR"
+  },
+  "target": "ADDR"
+}

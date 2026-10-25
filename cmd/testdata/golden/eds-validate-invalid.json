@@ -1,0 +1,38 @@
+{
+  "errors": 4,
+  "file": "../testdata/invalid.eds",
+  "issues": [
+    {
+      "line": 4,
+      "message": "CreateDate \"13-45-2026\" is not a date (mm-dd-yyyy)",
+      "section": "File",
+      "severity": "error"
+    },
+    {
+      "line": 5,
+      "message": "CreateTime \"25:00:00\" is not a time (hh:mm:ss)",
+      "section": "File",
+      "severity": "error"
+    },
+    {
+      "line": 13,
+      "message": "ProdCode: not a 16-bit number: banana",
+      "section": "Device",
+      "severity": "error"
+    },
+    {
+      "line": 19,
+      "message": "Assem100: member Param9 does not exist",
+      "section": "Assembly",
+      "severity": "error"
+    },
+    {
+      "line": 0,
+      "message": "no [Device Classification] section (EtherNetIP)",
+      "section": "Device Classification",
+      "severity": "warning"
+    }
+  ],
+  "valid": false,
+  "warnings": 1
+}

@@ -1,0 +1,67 @@
+{
+  "connected": false,
+  "count": 10,
+  "objects": [
+    {
+      "class": 1,
+      "hex": "0x01",
+      "name": "Identity",
+      "vendor_specific": false
+    },
+    {
+      "class": 2,
+      "hex": "0x02",
+      "name": "Message Router",
+      "vendor_specific": false
+    },
+    {
+      "class": 4,
+      "hex": "0x04",
+      "name": "Assembly",
+      "vendor_specific": false
+    },
+    {
+      "class": 6,
+      "hex": "0x06",
+      "name": "Connection Manager",
+      "vendor_specific": false
+    },
+    {
+      "class": 100,
+      "hex": "0x64",
+      "name": "Program Name (Rockwell)",
+      "vendor_specific": true
+    },
+    {
+      "class": 107,
+      "hex": "0x6B",
+      "name": "Symbol (Rockwell)",
+      "vendor_specific": true
+    },
+    {
+      "class": 108,
+      "hex": "0x6C",
+      "name": "Template (Rockwell)",
+      "vendor_specific": true
+    },
+    {
+      "class": 244,
+      "hex": "0xF4",
+      "name": "Port",
+      "vendor_specific": false
+    },
+    {
+      "class": 245,
+      "hex": "0xF5",
+      "name": "TCP/IP Interface",
+      "vendor_specific": false
+    },
+    {
+      "class": 246,
+      "hex": "0xF6",
+      "name": "Ethernet Link",
+      "vendor_specific": false
+    }
+  ],
+  "target": "ADDR"
+}

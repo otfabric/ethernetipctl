@@ -1,0 +1,36 @@
+# ethernetipctl adapter model: a small I/O adapter with a Logix tag database.
+identity:
+  vendor_id: 65535
+  device_type: 12          # communications adapter
+  product_code: 7
+  revision: "2.1"
+  serial_number: 0x00C0FFEE
+  product_name: "model adapter"
+
+assemblies:
+  - {instance: 100, kind: input, size: 8, data: "0102030405060708"}
+  - {instance: 150, kind: output, size: 8}
+  - {instance: 151, kind: config, size: 4}
+  - {instance: 152, kind: input-only}
+  - {instance: 153, kind: listen-only}
+
+echo:
+  - {output: 150, input: 100}
+
+logix:
+  program_name: "Line1"
+  templates:
+    - id: 0x200
+      name: Valve
+      handle: 0x1234
+      size: 8
+      members:
+        - {name: Position, type: REAL, offset: 0}
+        - {name: Open, type: BOOL, bit: 0, offset: 4}
+        - {name: Hosts, type: SINT, offset: 4}
+  tags:
+    - {name: Count, type: DINT, value: "5"}
+    - {name: Levels, type: REAL, dims: [3], value: "1.5,2.5,3.5"}
+    - {name: Label, type: STRING, value: "tank 1"}
+    - {name: Valves, type: struct, template: 0x200, dims: [2]}
+    - {name: "Program:Main.Step", type: INT, value: "3"}
