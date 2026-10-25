@@ -59,7 +59,7 @@
     },
     {
       "detail": {
-        "full_duplex": false,
+        "full_duplex": true,
         "link_active": true,
         "mac": "00:00:00:00:00:00",
         "speed_mbps": 100
