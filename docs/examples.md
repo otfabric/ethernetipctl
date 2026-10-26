@@ -79,7 +79,7 @@ Get_Attribute_Single, Get_Attributes_All, Set_Attribute_Single; unconnected or o
 
 ```console
 $ ethernetipctl read 127.0.0.1 @1/1/7 --type SHORT_STRING
-Read @1/1/7 (Identity) Get_Attribute_Single at 127.0.0.1:44818: 22 octets in 0.2 ms
+Read @1/1/7 (Identity) Get_Attribute_Single at 127.0.0.1:44818: 22 octets in 0.1 ms
   data:           15 65 74 68 65 72 6e 65 74 69 70 63 74 6c 20 61 64 61 70 74 65 72
   value:          SHORT_STRING "ethernetipctl adapter"
 ```
@@ -97,7 +97,7 @@ Read @1/1/7 (Identity) Get_Attribute_Single at 127.0.0.1:44818 (connected): 22 o
 
 ```console
 $ ethernetipctl read 127.0.0.1 @1/1 --all
-Read @1/1 (Identity) Get_Attributes_All at 127.0.0.1:44818: 36 octets in 0.1 ms
+Read @1/1 (Identity) Get_Attributes_All at 127.0.0.1:44818: 36 octets in 0.2 ms
   data:           ff ff 0c 00 01 00 01 01 00 00 01 00 00 00 15 65 74 68 65 72 6e 65 74 69 70 63 74 6c 20 61 64 61 70 74 65 72
 ```
 
@@ -193,9 +193,9 @@ Forward_Open tests, an input-only connection streaming inputs, an exclusive owne
 $ ethernetipctl forward-open 127.0.0.1 --config 151 --output 150 --input 100 --output-size 32 --input-size 32 --rpi 10ms
 Forward_Open to 127.0.0.1:44818 accepted in 0.2 ms (class 1 cyclic, O->T 38 octets, T->O 34 octets)
   class:          1
-  O->T conn ID:   0xB0E814AA
-  T->O conn ID:   0x52514091
-  triad:          serial 59891 vendor 65535 originator 148525169
+  O->T conn ID:   0x71134D7F
+  T->O conn ID:   0x31646209
+  triad:          serial 40709 vendor 65535 originator 264410275
   API:            O->T 10 ms, T->O 10 ms
   path:           [class 0x04] [instance 151] [point 150] [point 100]
 closed again with Forward_Close
@@ -214,8 +214,8 @@ $ echo $?
 
 ```console
 $ ethernetipctl io 127.0.0.1 --config 151 --output 152 --input 100 --input-size 32 --rpi 100ms --duration 350ms
-I/O connection to 127.0.0.1:44818 open: O->T 0xC05EC026, T->O 0xA7F38EEF, API 100ms/100ms, path [class 0x04] [instance 151] [point 152] [point 100]
-2026-10-26T13:29:45.045Z  #1      run   01 02 03 04 05 06 07 08 09 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32
+I/O connection to 127.0.0.1:44818 open: O->T 0xA0EAC33F, T->O 0xA7FDAC3B, API 100ms/100ms, path [class 0x04] [instance 151] [point 152] [point 100]
+2026-10-26T14:37:39.840Z  #1      run   01 02 03 04 05 06 07 08 09 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32
 1 sample(s) written; sent 4, received 4, dropped 0, duplicates 3; state connected
 ```
 
@@ -223,9 +223,9 @@ I/O connection to 127.0.0.1:44818 open: O->T 0xC05EC026, T->O 0xA7F38EEF, API 10
 
 ```console
 $ ethernetipctl io 127.0.0.1 --config 151 --output 150 --input 100 --output-size 32 --input-size 32 --rpi 100ms --duration 250ms --output-data aabbccddeeff00112233445566778899aabbccddeeff00112233445566778899 --yes --format json
-I/O connection to 127.0.0.1:44818 open: O->T 0x54F8C632, T->O 0x73AE46F9, API 100ms/100ms, path [class 0x04] [instance 151] [point 150] [point 100]
-{"received_at":"2026-10-26T13:29:45.413Z","seq":1,"run":true,"size":32,"data":"0102030405060708091011121314151617181920212223242526272829303132"}
-{"received_at":"2026-10-26T13:29:45.515Z","seq":2,"run":true,"size":32,"data":"aabbccddeeff00112233445566778899aabbccddeeff00112233445566778899"}
+I/O connection to 127.0.0.1:44818 open: O->T 0x10087F15, T->O 0x018D7EA7, API 100ms/100ms, path [class 0x04] [instance 151] [point 150] [point 100]
+{"received_at":"2026-10-26T14:37:40.226Z","seq":1,"run":true,"size":32,"data":"0102030405060708091011121314151617181920212223242526272829303132"}
+{"received_at":"2026-10-26T14:37:40.328Z","seq":2,"run":true,"size":32,"data":"aabbccddeeff00112233445566778899aabbccddeeff00112233445566778899"}
 2 sample(s) written; sent 3, received 3, dropped 0, duplicates 1; state connected
 ```
 
@@ -251,15 +251,15 @@ Connection Manager counters:
 
 ```console
 $ ethernetipctl diagnose 127.0.0.1
-Diagnosis of 127.0.0.1:44818: 8 passed, 0 failed, 0 skipped in 3 ms
-  OK      tcp-connect               0.3 ms  address=127.0.0.1:44818
-  OK      register-session          0.2 ms  session=0x543DF9CE
+Diagnosis of 127.0.0.1:44818: 8 passed, 0 failed, 0 skipped in 2 ms
+  OK      tcp-connect               0.2 ms  address=127.0.0.1:44818
+  OK      register-session          0.1 ms  session=0x0CECBB97
   OK      list-identity             0.1 ms  product_name=ethernetipctl adapter revision=1.1 state=operational status=0x0000 vendor_id=65535
   OK      list-services             0.1 ms  services=Communications
-  OK      identity                  0.2 ms  product_code=1 product_name=ethernetipctl adapter serial_number=0x00000001
-  OK      tcpip-interface           0.4 ms  gateway=0.0.0.0 ip=127.0.0.1 mask=0.0.0.0 status=1
-  OK      ethernet-link             0.4 ms  full_duplex=true link_active=true mac=00:00:00:00:00:00 speed_mbps=100
-  OK      connection-manager        1.0 ms  close_format_rejects=0 close_other_rejects=0 close_requests=4 connection_timeouts=0 open_format_rejects=0 open_other_rejects=1 open_requests=5 open_resource_rejects=0
+  OK      identity                  0.1 ms  product_code=1 product_name=ethernetipctl adapter serial_number=0x00000001
+  OK      tcpip-interface           0.2 ms  gateway=0.0.0.0 ip=127.0.0.1 mask=0.0.0.0 status=1
+  OK      ethernet-link             0.2 ms  full_duplex=true link_active=true mac=00:00:00:00:00:00 speed_mbps=100
+  OK      connection-manager        0.5 ms  close_format_rejects=0 close_other_rejects=0 close_requests=4 connection_timeouts=0 open_format_rejects=0 open_other_rejects=1 open_requests=5 open_resource_rejects=0
 ```
 
 ## Logix tags (Rockwell, vendor specific)
@@ -308,7 +308,7 @@ $ ethernetipctl tag read 127.0.0.1 Count --format json
   "values": [
     42
   ],
-  "rtt_ms": 0.115
+  "rtt_ms": 0.162
 }
 ```
 
@@ -411,17 +411,17 @@ What the adapter printed while the examples above ran (its stdout, one line per 
 
 ```console
 $ ethernetipctl adapter --listen 127.0.0.1 --io-address 127.0.0.1:2223 --echo --logix
-2026-10-26T13:29:43.748Z  listening           address=127.0.0.1:44818  detail=io 127.0.0.1:2223 udp 127.0.0.1:44818
-2026-10-26T13:29:44.903Z  connection-opened   remote=127.0.0.1:52151  connection=class3 ot=0x0EB4C0B0 to=0x4E81D141 serial=11170 path=@2/1
-2026-10-26T13:29:44.904Z  connection-closed   remote=127.0.0.1  connection=class3 ot=0x0EB4C0B0 to=0x4E81D141 serial=11170 path=@2/1
-2026-10-26T13:29:44.994Z  assembly-write      instance=150  size=32  data=0102030405060708091011121314151617181920212223242526272829303132  run=true
-2026-10-26T13:29:45.020Z  connection-opened   remote=127.0.0.1:52159  connection=class1 ot=0xB0E814AA to=0x52514091 serial=59891 path=[class 0x04] [instance 151] [point 150] [point 100]
-2026-10-26T13:29:45.020Z  connection-closed   remote=127.0.0.1  connection=class1 ot=0xB0E814AA to=0x52514091 serial=59891 path=[class 0x04] [instance 151] [point 150] [point 100]
-2026-10-26T13:29:45.045Z  connection-opened   remote=127.0.0.1:52161  connection=class1 ot=0xC05EC026 to=0xA7F38EEF serial=17061 path=[class 0x04] [instance 151] [point 152] [point 100]
-2026-10-26T13:29:45.397Z  connection-closed   remote=127.0.0.1  connection=class1 ot=0xC05EC026 to=0xA7F38EEF serial=17061 path=[class 0x04] [instance 151] [point 152] [point 100]
-2026-10-26T13:29:45.413Z  connection-opened   remote=127.0.0.1:52162  connection=class1 ot=0x54F8C632 to=0x73AE46F9 serial=27292 path=[class 0x04] [instance 151] [point 150] [point 100]
-2026-10-26T13:29:45.413Z  assembly-write      instance=150  size=32  data=aabbccddeeff00112233445566778899aabbccddeeff00112233445566778899  run=true
-2026-10-26T13:29:45.666Z  connection-closed   remote=127.0.0.1  connection=class1 ot=0x54F8C632 to=0x73AE46F9 serial=27292 path=[class 0x04] [instance 151] [point 150] [point 100]
-2026-10-26T13:29:45.764Z  tag-write           tag=Count
-2026-10-26T13:29:45.803Z  tag-write           tag=Flags
+2026-10-26T14:37:38.551Z  listening           address=127.0.0.1:44818  detail=io 127.0.0.1:2223 udp 127.0.0.1:44818
+2026-10-26T14:37:39.705Z  connection-opened   remote=127.0.0.1:55811  connection=class3 ot=0x51BE780A to=0x51FEB8B7 serial=50194 path=@2/1
+2026-10-26T14:37:39.705Z  connection-closed   remote=127.0.0.1  connection=class3 ot=0x51BE780A to=0x51FEB8B7 serial=50194 path=@2/1
+2026-10-26T14:37:39.793Z  assembly-write      instance=150  size=32  data=0102030405060708091011121314151617181920212223242526272829303132  run=true
+2026-10-26T14:37:39.816Z  connection-opened   remote=127.0.0.1:55819  connection=class1 ot=0x71134D7F to=0x31646209 serial=40709 path=[class 0x04] [instance 151] [point 150] [point 100]
+2026-10-26T14:37:39.816Z  connection-closed   remote=127.0.0.1  connection=class1 ot=0x71134D7F to=0x31646209 serial=40709 path=[class 0x04] [instance 151] [point 150] [point 100]
+2026-10-26T14:37:39.840Z  connection-opened   remote=127.0.0.1:55821  connection=class1 ot=0xA0EAC33F to=0xA7FDAC3B serial=35648 path=[class 0x04] [instance 151] [point 152] [point 100]
+2026-10-26T14:37:40.194Z  connection-closed   remote=127.0.0.1  connection=class1 ot=0xA0EAC33F to=0xA7FDAC3B serial=35648 path=[class 0x04] [instance 151] [point 152] [point 100]
+2026-10-26T14:37:40.226Z  connection-opened   remote=127.0.0.1:55822  connection=class1 ot=0x10087F15 to=0x018D7EA7 serial=37489 path=[class 0x04] [instance 151] [point 150] [point 100]
+2026-10-26T14:37:40.226Z  assembly-write      instance=150  size=32  data=aabbccddeeff00112233445566778899aabbccddeeff00112233445566778899  run=true
+2026-10-26T14:37:40.478Z  connection-closed   remote=127.0.0.1  connection=class1 ot=0x10087F15 to=0x018D7EA7 serial=37489 path=[class 0x04] [instance 151] [point 150] [point 100]
+2026-10-26T14:37:40.552Z  tag-write           tag=Count
+2026-10-26T14:37:40.591Z  tag-write           tag=Flags
 ```

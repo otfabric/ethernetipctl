@@ -324,6 +324,10 @@ func symbolTypeName(t logix.SymbolType) string {
 		return "STRING"
 	case t.IsStruct():
 		return fmt.Sprintf("struct 0x%04X", t.Template())
+	case t.Dims() > 0 && t.Atomic() == cip.TypeDWORD:
+		// Logix lists a BOOL array as a DWORD array (its dimension in
+		// bits); a user cannot declare DWORD tags.
+		return "BOOL"
 	}
 	return t.Atomic().String()
 }
