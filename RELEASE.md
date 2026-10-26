@@ -1,5 +1,31 @@
 # ethernetipctl Releases
 
+## v0.2.2
+
+**Date:** 2026-10-26  
+**Previous release:** v0.2.1
+
+### Summary
+
+Built on go-ethernetip v0.3.0. The commands and their output are unchanged
+(docs/examples.md regenerated: only timings and connection identifiers
+differ).
+
+### Dependencies
+
+- Built on [go-ethernetip v0.3.0](https://github.com/otfabric/go-ethernetip/releases/tag/v0.3.0), tested against eleven independent EtherNet/IP stacks.
+
+### Fixed (through go-ethernetip)
+
+- `adapter --logix`: a structure template's definition is sized as Rockwell's 1756-PM020 specifies (attribute 4 × 4 − 23 octets); pylogix, node-ethernet-ip and libplctag read the last member name of a template truncated before, and pylogix looped on a template read past the end.
+- `adapter`: replies on a Class 3 connection fit the connection's negotiated size (a large Logix read is a partial transfer), and a Multiple Service Packet may carry up to 1000 requests.
+
+### Upgrade notes
+
+- None.
+
+---
+
 ## v0.2.1
 
 **Date:** 2026-10-26  
