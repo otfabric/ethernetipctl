@@ -1,0 +1,18 @@
+{
+  "connection": {
+    "class": 3,
+    "connection_serial": "<dynamic>",
+    "originator_serial": "<dynamic>",
+    "originator_vendor": 65535,
+    "ot_connection_id": "<dynamic>",
+    "ot_rpi_ms": 7500,
+    "path": "@2/1",
+    "to_connection_id": "<dynamic>",
+    "to_rpi_ms": 7500
+  },
+  "duration_ms": "<dynamic>",
+  "held_ms": "<dynamic>",
+  "local": "<dynamic>",
+  "session": "<dynamic>",
+  "target": "ADDR"
+}

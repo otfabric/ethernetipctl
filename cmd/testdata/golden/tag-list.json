@@ -1,0 +1,80 @@
+{
+  "connected": false,
+  "count": 9,
+  "program": "",
+  "program_name": "test-project",
+  "tags": [
+    {
+      "dims": [],
+      "instance": 1,
+      "name": "Count",
+      "system": false,
+      "type": "DINT"
+    },
+    {
+      "dims": [],
+      "instance": 2,
+      "name": "Flags",
+      "system": false,
+      "type": "DINT"
+    },
+    {
+      "dims": [],
+      "instance": 3,
+      "name": "Speed",
+      "system": false,
+      "type": "REAL"
+    },
+    {
+      "dims": [],
+      "instance": 4,
+      "name": "Big",
+      "system": false,
+      "type": "ULINT"
+    },
+    {
+      "dims": [
+        10
+      ],
+      "instance": 5,
+      "name": "Values",
+      "system": false,
+      "type": "INT"
+    },
+    {
+      "dims": [
+        32
+      ],
+      "instance": 6,
+      "name": "Bits",
+      "system": false,
+      "type": "BOOL"
+    },
+    {
+      "dims": [],
+      "instance": 7,
+      "name": "On",
+      "system": false,
+      "type": "BOOL"
+    },
+    {
+      "dims": [],
+      "instance": 8,
+      "name": "Name",
+      "system": false,
+      "template": 4046,
+      "type": "STRING"
+    },
+    {
+      "dims": [
+        2
+      ],
+      "instance": 9,
+      "name": "Motors",
+      "system": false,
+      "template": 291,
+      "type": "struct 0x0123"
+    }
+  ],
+  "target": "ADDR"
+}

@@ -1,0 +1,45 @@
+{
+  "connected": false,
+  "handle": 48879,
+  "id": 291,
+  "members": [
+    {
+      "hidden": false,
+      "info": 0,
+      "name": "Speed",
+      "offset": 0,
+      "type": "REAL"
+    },
+    {
+      "hidden": false,
+      "info": 4,
+      "name": "Count",
+      "offset": 4,
+      "type": "DINT[4]"
+    },
+    {
+      "hidden": true,
+      "info": 0,
+      "name": "ZZZZZZZZZZMotor0",
+      "offset": 20,
+      "type": "SINT"
+    },
+    {
+      "hidden": false,
+      "info": 0,
+      "name": "Running",
+      "offset": 20,
+      "type": "BOOL"
+    },
+    {
+      "hidden": false,
+      "info": 0,
+      "name": "Name",
+      "offset": 24,
+      "type": "STRING"
+    }
+  ],
+  "name": "Motor",
+  "size": 112,
+  "target": "ADDR"
+}

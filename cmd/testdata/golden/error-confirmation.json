@@ -1,0 +1,7 @@
+{
+  "error": {
+    "code": "confirmation_required",
+    "kind": "invalid_input",
+    "message": "write changes the target: add --yes to confirm (nothing was sent)"
+  }
+}

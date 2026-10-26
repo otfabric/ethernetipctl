@@ -1,0 +1,13 @@
+{
+  "class": 1,
+  "class_name": "Identity",
+  "connected": false,
+  "data": "01000c002a0003070000785634120c746573742061646170746572",
+  "instance": 1,
+  "length": 27,
+  "path": "@1/1",
+  "route": "1/0",
+  "rtt_ms": "<dynamic>",
+  "service": "Get_Attributes_All",
+  "target": "ADDR"
+}

@@ -1,1 +1,525 @@
-# ethernetipctl
+# ethernetipctl — EtherNet/IP & CIP Command-Line Tool: Discover, Identify, Read & Write Attributes, I/O Connections, Logix Tags, EDS Files & Adapter Simulator
+
+[![Go Version](https://img.shields.io/badge/Go-1.25+-00ADD8?style=flat&logo=go)](https://go.dev/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![CI Status](https://github.com/otfabric/ethernetipctl/actions/workflows/ci.yml/badge.svg)](https://github.com/otfabric/ethernetipctl/actions/workflows/ci.yml)
+[![Code Coverage](https://codecov.io/gh/otfabric/ethernetipctl/graph/badge.svg)](https://codecov.io/gh/otfabric/ethernetipctl)
+[![Latest Release](https://img.shields.io/github/v/release/otfabric/ethernetipctl?label=release)](https://github.com/otfabric/ethernetipctl/releases)
+
+**ethernetipctl is a command-line toolkit for EtherNet/IP, the industrial Ethernet protocol of ODVA, and the Common Industrial Protocol (CIP) it carries.** As an originator it finds devices with one ListIdentity request, identifies them, reads and writes any attribute with explicit messages (unconnected, routed through a backplane, or over Class 3 connections), lists the objects a device implements, opens and closes connections, exchanges I/O data with an adapter, and diagnoses a device step by step. It reads and writes the tags of Rockwell Logix controllers, inspects, validates and generates Electronic Data Sheets (EDS) and turns them into Go code. As an adapter it simulates a device from a small model, so that a scanner or a PLC has something to talk to.
+
+It is built for commissioning, troubleshooting a device or a network path, checking what a device says about itself, and hardware-free test setups. Output can be plain text, a table or JSON with stable exit codes, so it works in scripts and CI. It is written in Go on top of [go-ethernetip](https://github.com/otfabric/go-ethernetip).
+
+**Quick links:** [Quick start](#quick-start) · [Features](#features) · [Installation](#installation) · [EtherNet/IP in two minutes](#ethernetip-in-two-minutes) · [Commands](#commands) · [Adapter simulator](#simulate-an-adapter) · [Safety](#safety) · [JSON and exit codes](#json-output-and-exit-codes)
+
+> **Responsible use:** ethernetipctl sends real CIP requests. Only use it on devices and networks you own or are authorized to test. `write`, `reset`, `assembly write`, `tag write` and `io` with output data change a device, and need `--yes` (see [Safety](#safety) and [SECURITY.md](SECURITY.md)): know what an attribute, an assembly or a tag does before you write it. ethernetipctl never scans address ranges.
+
+---
+
+## Quick start
+
+Download a binary from [GitHub Releases](https://github.com/otfabric/ethernetipctl/releases) (see [Installation](#installation)). No device at hand? Start the simulated adapter in one terminal:
+
+```console
+ethernetipctl adapter --listen 127.0.0.1 --echo --logix
+```
+
+and talk to it from another (replace `127.0.0.1` with your device):
+
+```console
+# Which devices answer on this segment? (one ListIdentity broadcast)
+ethernetipctl discover --address 255.255.255.255
+
+# Who is it?
+ethernetipctl identify 127.0.0.1
+
+# Read the product name, decoded
+ethernetipctl read 127.0.0.1 @1/1/7 --type SHORT_STRING
+
+# Which objects does it implement?
+ethernetipctl objects 127.0.0.1
+
+# Check it step by step: TCP, session, identity, TCP/IP, Ethernet link, connections
+ethernetipctl diagnose 127.0.0.1
+
+# Watch input assembly 100 through an input-only connection
+ethernetipctl io 127.0.0.1 --config 151 --output 152 --input 100 --input-size 32 --rpi 50ms
+
+# A Logix tag (vendor specific), as JSON for a script
+ethernetipctl tag read 127.0.0.1 Count --format json
+```
+
+```console
+$ ethernetipctl identify 127.0.0.1
+Identity of 127.0.0.1:44818 (in 1 ms)
+ListIdentity:
+  protocol version: 1
+  socket:         127.0.0.1:44818
+  product name:   "ethernetipctl adapter"
+  vendor:         65535 (-)
+  device type:    12 (Communications Adapter)
+  product code:   1
+  revision:       1.1
+  serial number:  0x00000001
+  status:         0x0000 -
+  state:          3 (operational)
+Identity object (Get_Attributes_All @1/1):
+  product name:   "ethernetipctl adapter"
+  ...
+```
+
+---
+
+## Features
+
+| **Feature** | **Description** |
+|---|---|
+| Discover | One ListIdentity datagram over UDP to a broadcast address or one device; every device that answers within `--wait`, with its identity. Never a range scan. |
+| Identify, status | ListIdentity over the TCP session and Get_Attributes_All of the Identity object: vendor (with ODVA's name), device type, product code, revision, status word and its faults, serial number, product name, state. `status` judges health in one line. |
+| Services, interfaces | ListServices (capabilities: CIP over TCP, I/O over UDP) and ListInterfaces. |
+| Read, write | Get_Attribute_Single, Get_Attributes_All (`--all`) and Set_Attribute_Single of any `@class/instance/attribute`; raw hex, and values decoded or encoded as CIP data types (`BOOL` … `LREAL`, `SHORT_STRING`, `STRING`, `STRING2`, arrays). |
+| Routing, connected messaging | `--route 1/0` sends requests through a device's backplane (Unconnected_Send) to a module or controller; `--connected` sends them over a Class 3 connection. |
+| Objects | The class list of the Message Router with names; the class attributes and an instance of any object. |
+| Sessions and connections | Open a session and a Class 3 connection and see their IDs and intervals; test a Forward_Open of an I/O connection and close it, or keep it and close it later with `forward-close`; the Connection Manager's counters. |
+| I/O | Class 1 I/O connections (exclusive owner, input only, listen only, multicast, Large_Forward_Open) with the scanner of go-ethernetip, streaming the inputs. |
+| Assemblies | Read and write assembly data with explicit messages. |
+| Diagnose | Structured checks with outcome and timing: TCP connect, RegisterSession, ListIdentity, ListServices, Identity, TCP/IP Interface, Ethernet Link, Connection Manager counters. |
+| Logix tags | Rockwell Logix (vendor specific): read, write (also single bits), list (controller and program scope), structure templates, and structures decoded with their templates. |
+| EDS | Inspect, validate (exit code for CI), generate from a device or from flags, and generate Go code (identity, parameters, assembly structs, scanner configurations). |
+| Adapter simulator | A simulated adapter from flags or a YAML/JSON model: identity, assemblies, echo, Logix tags; every connection, write and request streamed as an event. |
+| Script-friendly | `--format text\|json\|table`, a single JSON error object on failure (with the CIP status), stable exit codes, `ETHERNETIPCTL_*` environment variables. |
+
+---
+
+## Installation
+
+The easiest way to install ethernetipctl is to download a pre-built binary from the [GitHub Releases page](https://github.com/otfabric/ethernetipctl/releases). No Go toolchain is required.
+
+| Platform | CPU | Download |
+|---|---|---|
+| Linux | x86-64 | `ethernetipctl-<version>-linux-amd64.tar.gz` |
+| Linux | 64-bit ARM (Raspberry Pi 4/5 with a 64-bit OS, AWS Graviton) | `ethernetipctl-<version>-linux-arm64.tar.gz` |
+| Linux | 32-bit ARM, ARMv7 (Raspberry Pi 2 and later with a 32-bit OS) | `ethernetipctl-<version>-linux-armv7.tar.gz` |
+| macOS | Apple Silicon (M1 and later) | `ethernetipctl-<version>-darwin-arm64.tar.gz` |
+| macOS | Intel | `ethernetipctl-<version>-darwin-amd64.tar.gz` |
+| Windows | x86-64 | `ethernetipctl-<version>-windows-amd64.zip` |
+| Windows | ARM64 | `ethernetipctl-<version>-windows-arm64.zip` |
+
+Each release also contains `ethernetipctl-<version>-checksums.txt` (SHA-256) so you can verify your download. The commands below fetch the **latest** release, verify its checksum and install it. Afterwards, check that it works:
+
+```console
+ethernetipctl version
+```
+
+### Linux
+
+```bash
+# 1. Find the latest version and your CPU architecture
+VERSION=$(curl -fsSLI -o /dev/null -w '%{url_effective}' https://github.com/otfabric/ethernetipctl/releases/latest | sed 's|.*/v||')
+case "$(uname -m)" in
+  x86_64)         ARCH=amd64 ;;
+  aarch64|arm64)  ARCH=arm64 ;;
+  armv7l)         ARCH=armv7 ;;
+  *) echo "Unsupported architecture: $(uname -m)" >&2; exit 1 ;;
+esac
+
+# 2. Download the archive and the checksum file
+FILE="ethernetipctl-${VERSION}-linux-${ARCH}.tar.gz"
+BASE="https://github.com/otfabric/ethernetipctl/releases/download/v${VERSION}"
+curl -fsSLO "${BASE}/${FILE}"
+curl -fsSLO "${BASE}/ethernetipctl-${VERSION}-checksums.txt"
+
+# 3. Verify the download (should print "OK")
+grep "${FILE}" "ethernetipctl-${VERSION}-checksums.txt" | sha256sum -c -
+
+# 4. Extract and install (the binary in the archive carries the version and platform in its name)
+rm -rf ethernetipctl-dl && mkdir -p ethernetipctl-dl && tar -xzf "${FILE}" -C ethernetipctl-dl
+sudo install -m 0755 "ethernetipctl-dl/ethernetipctl-${VERSION}-linux-${ARCH}" /usr/local/bin/ethernetipctl
+```
+
+No `sudo`? Install into your home directory instead (and make sure `~/.local/bin` is in your `PATH`):
+
+```bash
+mkdir -p ~/.local/bin
+install -m 0755 "ethernetipctl-dl/ethernetipctl-${VERSION}-linux-${ARCH}" ~/.local/bin/ethernetipctl
+```
+
+
+### macOS
+
+```bash
+# 1. Find the latest version and your CPU architecture (arm64 = Apple Silicon, x86_64 = Intel)
+VERSION=$(curl -fsSLI -o /dev/null -w '%{url_effective}' https://github.com/otfabric/ethernetipctl/releases/latest | sed 's|.*/v||')
+case "$(uname -m)" in
+  arm64)   ARCH=arm64 ;;
+  x86_64)  ARCH=amd64 ;;
+  *) echo "Unsupported architecture: $(uname -m)" >&2; exit 1 ;;
+esac
+
+# 2. Download the archive and the checksum file
+FILE="ethernetipctl-${VERSION}-darwin-${ARCH}.tar.gz"
+BASE="https://github.com/otfabric/ethernetipctl/releases/download/v${VERSION}"
+curl -fsSLO "${BASE}/${FILE}"
+curl -fsSLO "${BASE}/ethernetipctl-${VERSION}-checksums.txt"
+
+# 3. Verify the download (should print "OK")
+grep "${FILE}" "ethernetipctl-${VERSION}-checksums.txt" | shasum -a 256 -c -
+
+# 4. Extract and install (the binary in the archive carries the version and platform in its name)
+rm -rf ethernetipctl-dl && mkdir -p ethernetipctl-dl && tar -xzf "${FILE}" -C ethernetipctl-dl
+sudo install -m 0755 "ethernetipctl-dl/ethernetipctl-${VERSION}-darwin-${ARCH}" /usr/local/bin/ethernetipctl
+```
+
+If you downloaded the archive with a web browser instead of `curl` and macOS refuses to run the binary ("cannot be verified"), remove the quarantine flag: `xattr -d com.apple.quarantine /usr/local/bin/ethernetipctl`.
+
+### Windows (PowerShell)
+
+```powershell
+# 1. Find the latest version and your CPU architecture
+$version = (Invoke-RestMethod https://api.github.com/repos/otfabric/ethernetipctl/releases/latest).tag_name.TrimStart('v')
+$arch    = if ($env:PROCESSOR_ARCHITECTURE -eq 'ARM64') { 'arm64' } else { 'amd64' }
+
+# 2. Download the archive and the checksum file
+$file = "ethernetipctl-$version-windows-$arch.zip"
+$base = "https://github.com/otfabric/ethernetipctl/releases/download/v$version"
+Invoke-WebRequest "$base/$file" -OutFile "$env:TEMP\$file"
+Invoke-WebRequest "$base/ethernetipctl-$version-checksums.txt" -OutFile "$env:TEMP\ethernetipctl-checksums.txt"
+
+# 3. Verify the download (throws an error on mismatch)
+$expected = ((Select-String -Path "$env:TEMP\ethernetipctl-checksums.txt" -Pattern $file).Line -split '\s+')[0]
+$actual   = (Get-FileHash "$env:TEMP\$file" -Algorithm SHA256).Hash
+if ($expected -ne $actual) { throw "Checksum mismatch for $file" }
+
+# 4. Extract to a per-user folder and name the program ethernetipctl.exe
+#    (the .exe in the archive carries the version and platform in its name)
+$dir = "$env:LOCALAPPDATA\Programs\ethernetipctl"
+New-Item -ItemType Directory -Force -Path $dir | Out-Null
+Remove-Item -Recurse -Force "$env:TEMP\ethernetipctl-dl" -ErrorAction SilentlyContinue
+Expand-Archive "$env:TEMP\$file" -DestinationPath "$env:TEMP\ethernetipctl-dl" -Force
+Copy-Item "$env:TEMP\ethernetipctl-dl\ethernetipctl-$version-windows-$arch.exe" "$dir\ethernetipctl.exe" -Force
+
+# 5. Add ethernetipctl to your user PATH (then open a new terminal)
+$userPath = [Environment]::GetEnvironmentVariable('Path', 'User')
+if ($userPath -notlike "*$dir*") {
+  [Environment]::SetEnvironmentVariable('Path', "$userPath;$dir", 'User')
+}
+```
+
+If Windows SmartScreen warns about an unrecognised app, choose **More info → Run anyway**.
+
+### Manual download
+
+1. Open the [latest release](https://github.com/otfabric/ethernetipctl/releases/latest).
+2. Download the archive for your platform from the table above.
+3. Extract it, rename the binary to `ethernetipctl` (`ethernetipctl.exe` on Windows) and move it to a folder on your `PATH`.
+
+### Update
+
+Run the same commands again. They always fetch the latest release, unpack it into an emptied `ethernetipctl-dl` folder and overwrite the previous binary.
+
+### Build from source
+
+Requires Go 1.25 or later.
+
+```console
+git clone https://github.com/otfabric/ethernetipctl.git
+cd ethernetipctl
+make build
+```
+
+`make build` runs `make check` first, which needs `staticcheck`, `golangci-lint` and `govulncheck` on your `PATH`, and writes the binary to **`bin/ethernetipctl`** (see [Development](#development)). Without those tools, `go build -o bin/ethernetipctl .` builds it alone. With a Go toolchain you can also install straight from the module (`ethernetipctl version` then reports the version the go toolchain records: the module version with `go install`, such as `v0.1.0`, and with a plain `go build` in a clone the version it derives from the git tags, such as `v0.1.0+dirty`, with the commit; `dev` when none is recorded, as in a copy without git):
+
+```console
+go install github.com/otfabric/ethernetipctl@latest
+```
+
+---
+
+## EtherNet/IP in two minutes
+
+- **Encapsulation.** A device listens on TCP port 44818 (and UDP 44818 for ListIdentity). An originator registers a **session** (RegisterSession) and sends CIP requests in it. ListIdentity, ListServices and ListInterfaces ask the device about itself without a session.
+- **Objects.** Everything a device exposes is an **object**: a class (Identity = 1, Message Router = 2, Assembly = 4, Connection Manager = 6, TCP/IP Interface = 0xF5, Ethernet Link = 0xF6, …), its instances, and their numbered attributes. A path `@1/1/7` is class 1, instance 1, attribute 7: the product name. Services act on them: Get_Attribute_Single (0x0E), Get_Attributes_All (0x01), Set_Attribute_Single (0x10), Reset (0x05).
+- **Explicit messaging** is request and response: **unconnected** (each request on its own, possibly routed with Unconnected_Send through a chassis backplane: `--route 1/0` is slot 0) or **connected** over a **Class 3** connection opened with Forward_Open.
+- **Implicit (I/O) messaging** exchanges **assembly** data cyclically over UDP port 2222 on a **Class 1** connection: the originator's outputs (O->T) and the device's inputs (T->O) every RPI (requested packet interval). The connection path names the configuration assembly and the two **connection points**; an input-only or listen-only connection uses a heartbeat point instead of the output assembly. A connection is identified by its **triad** (connection serial, originator vendor, originator serial), which Forward_Close needs.
+- **EDS.** An Electronic Data Sheet describes a device: identity, parameters, assemblies, connections. Configuration tools import it.
+- **Logix.** Rockwell's controllers add symbolic tag services (Read Tag 0x4C, Write Tag 0x4D, …) and their Symbol and Template objects. They are vendor specific: not part of CIP.
+
+---
+
+## Usage
+
+### General CLI usage
+
+```console
+ethernetipctl <command> [arguments] [flags]
+```
+
+A device is named as `host[:port]`: an IPv4 address or a host name, port 44818 unless `--port` or the host says otherwise. IPv6, prefixes, ranges, lists and wildcards are refused: every command addresses one device.
+
+| Global flag | Meaning |
+|---|---|
+| `--format text\|json\|table` | Output format of stdout (`ETHERNETIPCTL_OUTPUT_FORMAT`) |
+| `--timeout D` | Timeout of connecting and of each request, e.g. `500ms`, `5s` (default 5s; `ETHERNETIPCTL_TIMEOUT`) |
+| `--port N` | Port of a host without one (default 44818; `ETHERNETIPCTL_PORT`) |
+| `--debug` | go-ethernetip's protocol log on stderr, and the causes of an error |
+
+Results go to stdout; progress, connection state, summaries and the debug trace to stderr.
+
+### Commands
+
+| Command | What it does | Changes the device |
+|---|---|---|
+| `discover --address A [--wait D] [--local IP]` | One ListIdentity over UDP to a broadcast address or one device | no |
+| `identify <host>` | ListIdentity and the Identity object | no |
+| `status <host>` | Health in one line | no |
+| `services <host>`, `interfaces <host>` | ListServices, ListInterfaces | no |
+| `read <host> <path> [--all] [--type T]` (aliases `attribute`, `get`) | Get_Attribute_Single / Get_Attributes_All | no |
+| `write <host> <path> (--data HEX \| --type T --value V) --yes` | Set_Attribute_Single | **yes** |
+| `objects <host>` | Message Router class list | no |
+| `object <host> <class> [instance]` | Class attributes and Get_Attributes_All of an instance | no |
+| `reset <host> [--type 0\|1] --yes` | Identity Reset (0 power cycle, 1 factory defaults) | **yes** |
+| `session <host> [--connected] [--hold D]` (alias `connect`) | Open a session (and a Class 3 connection) and show it | no |
+| `forward-open <host> --config --output --input --output-size --input-size --rpi [--keep]` | Test a Forward_Open of an I/O connection | opens a connection |
+| `forward-close <host> --connection-serial --originator-serial --config --output --input` | Forward_Close a connection by its triad | closes a connection |
+| `connections <host>` | Active/max connections and Connection Manager counters | no |
+| `io <host> --config --output --input --output-size --input-size --rpi [--duration] [--output-data HEX --yes]` | Stream the inputs of an I/O connection | **yes** with output data |
+| `assembly read <host> <instance>` / `assembly write <host> <instance> --data HEX --yes` | Assembly data (attribute 3 of class 4) | write: **yes** |
+| `diagnose <host>` | Structured checks with timing | no |
+| `tag read\|write\|list\|types\|decode …` | Rockwell Logix tags (vendor specific) | write: **yes** |
+| `eds inspect\|validate\|generate\|codegen …` | Electronic Data Sheets | no |
+| `adapter [--config model.yaml]` (alias `server`) | Simulated adapter | — |
+| `version`, `completion bash\|zsh\|fish\|powershell` | | |
+
+`--route 1/0` (Unconnected_Send through a backplane; `1/0,2/192.168.1.10` for several hops) works with every explicit command; `--connected` (a Class 3 connection) with `identify`, `read`, `write`, `objects`, `object`, `connections`, `assembly` and `tag`.
+
+`attribute` is an alias of `read`: reading one attribute is what `read` does, and `read --all` reads them all.
+
+### Discover and identify
+
+```console
+# Every device on the local segment, as a table
+ethernetipctl discover --address 255.255.255.255 --format table
+
+# A directed broadcast from one interface, waiting 3 seconds
+ethernetipctl discover --address 192.168.1.255 --local 192.168.1.20 --wait 3s
+
+ethernetipctl identify 192.168.1.10
+ethernetipctl status 192.168.1.10
+ethernetipctl services 192.168.1.10
+```
+
+`discover` sends exactly one datagram; devices delay their answer to a broadcast by up to `--max-delay` (their default is 2 s), so keep `--wait` longer.
+
+### Read and write attributes
+
+```console
+# The product name, and the whole Identity object
+ethernetipctl read 192.168.1.10 @1/1/7 --type SHORT_STRING
+ethernetipctl read 192.168.1.10 @1/1 --all
+
+# The IP configuration of the TCP/IP Interface object, as hex
+ethernetipctl read 192.168.1.10 @0xF5/1/5
+
+# Through the backplane to the module in slot 2, over a Class 3 connection
+ethernetipctl read 192.168.1.10 @1/1/7 --type SHORT_STRING --route 1/2 --connected
+
+# Write the multicast TTL (needs --yes)
+ethernetipctl write 192.168.1.10 @0xF5/1/8 --type USINT --value 1 --yes
+
+# The object list, and one object
+ethernetipctl objects 192.168.1.10
+ethernetipctl object 192.168.1.10 ethernet-link
+```
+
+Paths are `@class/instance/attribute` with decimal or `0x` hex numbers, or the hex octets of a padded EPATH (`"20 01 24 01 30 07"`). Classes in `object` are numbers or names (`identity`, `tcp/ip interface`, `0xF6`).
+
+### Connections and I/O
+
+```console
+# Does the device accept this exclusive-owner connection? (opened and closed again)
+ethernetipctl forward-open 192.168.1.10 --config 151 --output 150 --input 100 --output-size 32 --input-size 32 --rpi 10ms
+
+# Keep an input-only connection, close it later by its triad
+ethernetipctl forward-open 192.168.1.10 --config 151 --output 152 --input 100 --input-size 32 --rpi 1s --timeout-multiplier 7 --keep
+ethernetipctl forward-close 192.168.1.10 --connection-serial 4711 --originator-serial 305419896 --config 151 --output 152 --input 100
+
+# Watch the inputs, only when they change, for a minute
+ethernetipctl io 192.168.1.10 --config 151 --output 152 --input 100 --input-size 32 --rpi 20ms --changes --duration 1m
+
+# Exclusive owner, writing outputs (needs --yes)
+ethernetipctl io 192.168.1.10 --config 151 --output 150 --input 100 --output-size 4 --input-size 32 --rpi 10ms --output-data 01000000 --yes
+
+# Counters of the Connection Manager
+ethernetipctl connections 192.168.1.10
+```
+
+The I/O endpoint listens on UDP 2222 (`--io-address`); a different port is announced to the device in the Forward_Open, which not every device honours. CIP cannot list another device's connections: `connections` shows its counters, and the simulated adapter logs every connection it opens and closes.
+
+### Diagnose
+
+```console
+$ ethernetipctl diagnose 192.168.1.10
+Diagnosis of 192.168.1.10:44818: 8 passed, 0 failed, 0 skipped in 4 ms
+  OK      tcp-connect               0.3 ms  address=192.168.1.10:44818
+  OK      register-session          0.2 ms  session=0x8C8A6AE6
+  OK      list-identity             0.2 ms  product_name=… revision=1.1 state=operational status= vendor_id=…
+  OK      list-services             0.1 ms  services=Communications
+  OK      identity                  0.2 ms  product_code=… product_name=… serial_number=0x…
+  OK      tcpip-interface           0.4 ms  gateway=192.168.1.1 ip=192.168.1.10 mask=255.255.255.0 status=1
+  OK      ethernet-link             0.4 ms  full_duplex=true link_active=true mac=… speed_mbps=100
+  OK      connection-manager        0.9 ms  close_requests=0 … open_requests=0 …
+```
+
+Exit code 0 when everything passed, 7 when a check failed or was skipped; the report is always written.
+
+### Logix tags (Rockwell, vendor specific)
+
+```console
+ethernetipctl tag list 192.168.1.10 --route 1/0
+ethernetipctl tag read 192.168.1.10 Program:Main.Counts[2] --count 5 --route 1/0
+ethernetipctl tag write 192.168.1.10 Setpoint --type REAL --value 12.5 --route 1/0 --yes
+ethernetipctl tag write 192.168.1.10 Flags.3 --type DINT --value 1 --route 1/0 --yes
+ethernetipctl tag types 192.168.1.10 0x123 --route 1/0
+ethernetipctl tag decode 192.168.1.10 Motors[1] --route 1/0 --connected
+```
+
+These are Rockwell Automation Logix services (ControlLogix, CompactLogix and compatible controllers), not CIP: other devices refuse them.
+
+### EDS files
+
+```console
+ethernetipctl eds inspect adapter.eds
+ethernetipctl eds validate adapter.eds        # exit 3 when the file has errors
+ethernetipctl eds codegen adapter.eds --package adapter --output adapter/device.go
+ethernetipctl eds generate --from-device 192.168.1.10 --assembly 100:32:Input --assembly 150:32:Output \
+    --assembly 151:10:Config --connection 151:150:100:32:32:10ms --output device.eds
+```
+
+`eds generate` takes the identity from the device (or `--vendor-id`, `--product-name`, …) and the assemblies and connections from flags: CIP has no way to list a device's assemblies.
+
+---
+
+## Simulate an adapter
+
+```console
+# Default adapter: identity, assemblies 100/150/151/152/153, outputs echoed to inputs
+ethernetipctl adapter --echo
+
+# On localhost, with an emulated Logix tag database, events as JSON Lines
+ethernetipctl adapter --listen 127.0.0.1 --logix --format json
+
+# From a model
+ethernetipctl adapter --config adapter.yaml --duration 10m
+```
+
+The adapter answers sessions, ListIdentity (TCP and UDP), explicit messages (unconnected, routed to slot 0, Class 3), Forward_Open and Forward_Close, and exchanges I/O data on its assemblies. Every event (connections, assembly and tag writes, resets, and with `--requests` every request) is written to stdout. The model (identity, assemblies with initial data, echo pairs, Logix templates and tags) is described in [docs/adapter-config.md](docs/adapter-config.md); [testdata/adapter.yaml](testdata/adapter.yaml) is an example.
+
+---
+
+## Safety
+
+- **Writes need explicit intent.** `write`, `reset`, `assembly write`, `tag write` and `io` with output data (`--output-size` above 0) do nothing without `--yes`: they validate the invocation, open no connection, send nothing and exit `3` (`confirmation_required`). `--yes` has no environment variable on purpose.
+- **No scanning.** `discover` sends one ListIdentity datagram to the one address you give (a broadcast address reaches one segment); every other command talks to one device. Prefixes, ranges, lists and wildcards are refused.
+- **Requests are never repeated.** After a timeout, a write may or may not have been executed: read back before you write again.
+- **I/O connections write outputs.** An exclusive-owner connection sends output data at every RPI, zeros until `--output-data` is applied; `--idle` sends it in idle mode. Use an input-only connection (`--output` the heartbeat point, `--output-size 0`) to watch inputs without writing anything.
+- **The adapter listens on every interface by default.** Use `--listen` to bind it to one address.
+
+See [SECURITY.md](SECURITY.md) for the details.
+
+---
+
+## JSON output and exit codes
+
+Every command writes `--format json`: one indented document, or JSON Lines for the streams (`io`, `adapter`). A fatal error is one object:
+
+```json
+{
+  "error": {
+    "kind": "refused",
+    "code": "attribute_not_supported",
+    "message": "the target refused the request: Get_Attribute_Single @1/1/99: attribute not supported (0x14)",
+    "cip_status": 20
+  }
+}
+```
+
+| Exit code | Meaning |
+|---|---|
+| 0 | Success |
+| 2 | Usage: unknown command or flag, missing argument |
+| 3 | Invalid input (nothing sent), a change without `--yes`, `eds validate` of a file with errors |
+| 4 | Transport: connection refused or lost, cannot listen |
+| 5 | Timeout: no answer, or an I/O connection timed out |
+| 6 | Refused by the target (CIP status) or protocol error |
+| 7 | Partial: `diagnose` with a failed or skipped check |
+| 10 | Output or internal error, interrupted |
+
+See [docs/json-output.md](docs/json-output.md) (field conventions, a stable contract) and [docs/exitcodes.md](docs/exitcodes.md) (every kind and code).
+
+---
+
+## Environment variable configuration
+
+| Variable | Flag |
+|---|---|
+| `ETHERNETIPCTL_OUTPUT_FORMAT` | `--format` |
+| `ETHERNETIPCTL_TIMEOUT` | `--timeout` |
+| `ETHERNETIPCTL_PORT` | `--port` |
+| `ETHERNETIPCTL_ROUTE` | `--route` |
+| `ETHERNETIPCTL_CONNECTED` | `--connected` |
+| `ETHERNETIPCTL_TYPE` | `read --type` |
+| `ETHERNETIPCTL_DISCOVER_ADDRESS` | `discover --address` |
+| `ETHERNETIPCTL_IO_ADDRESS` | `io --io-address`, `adapter --io-address` |
+| `ETHERNETIPCTL_ADAPTER_CONFIG` | `adapter --config` |
+| `ETHERNETIPCTL_LISTEN` | `adapter --listen` |
+
+A flag on the command line wins over its variable. A malformed value (`ETHERNETIPCTL_PORT=banana`) is an error (exit 3) before anything runs.
+
+---
+
+## Project structure
+
+```
+main.go                Entry point, build metadata
+cmd/                   Root command, version, completion, Run (the testable entry point)
+cmd/device/            Commands on one device: discover, identify, status, services, interfaces,
+                       read, write, objects, object, reset, session, forward-open, forward-close,
+                       connections, io, assembly, diagnose
+cmd/tag/               Rockwell Logix tag commands
+cmd/eds/               EDS commands
+cmd/adapter/           The simulated adapter
+internal/eip/          What the commands do with go-ethernetip, and error classification
+internal/adapter/      The adapter model and server
+internal/config/       Configuration types, flag and environment binding, host parsing
+internal/format/       Output formatting (text, JSON, table, streaming)
+internal/types/        Output data models
+internal/runner/       Command wiring, formatted and streaming runs, fatal rendering
+internal/errs/         Typed errors, stable codes, exit-code mapping
+internal/cli/          Shared Cobra helpers
+docs/                  Exit codes, JSON output contract, adapter model reference
+testdata/              EDS files and the example adapter model
+```
+
+## Development
+
+```console
+make check      # format, lint, vet, 32-bit typecheck, vulnerability scan, race tests, coverage gate
+make test       # tests with the race detector
+make coverage   # whole-module coverage; fails below 90%
+make build      # bin/ethernetipctl (runs make check first)
+make build-all  # release binaries for every platform into release/
+```
+
+The tests need no hardware: they start go-ethernetip servers (and Logix tag servers) on loopback and run the command tree through `cmd.Run`. See [CONTRIBUTING.md](CONTRIBUTING.md).
+
+## Version history
+
+See [RELEASE.md](RELEASE.md).
+
+## Contributing
+
+Contributions are welcome: see [CONTRIBUTING.md](CONTRIBUTING.md). Report security issues privately: see [SECURITY.md](SECURITY.md).
+
+## License
+
+[MIT](LICENSE)

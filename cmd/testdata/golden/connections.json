@@ -1,0 +1,47 @@
+{
+  "active_connections": 0,
+  "counters": [
+    {
+      "attribute": 1,
+      "name": "open_requests",
+      "value": 0
+    },
+    {
+      "attribute": 2,
+      "name": "open_format_rejects",
+      "value": 0
+    },
+    {
+      "attribute": 3,
+      "name": "open_resource_rejects",
+      "value": 0
+    },
+    {
+      "attribute": 4,
+      "name": "open_other_rejects",
+      "value": 0
+    },
+    {
+      "attribute": 5,
+      "name": "close_requests",
+      "value": 0
+    },
+    {
+      "attribute": 6,
+      "name": "close_format_rejects",
+      "value": 0
+    },
+    {
+      "attribute": 7,
+      "name": "close_other_rejects",
+      "value": 0
+    },
+    {
+      "attribute": 8,
+      "name": "connection_timeouts",
+      "value": 0
+    }
+  ],
+  "max_connections": 128,
+  "target": "ADDR"
+}

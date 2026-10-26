@@ -1,0 +1,7 @@
+{
+  "error": {
+    "code": "invalid_input",
+    "kind": "usage",
+    "message": "accepts 2 arg(s), received 0"
+  }
+}

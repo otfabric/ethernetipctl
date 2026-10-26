@@ -1,0 +1,20 @@
+$ An EDS with errors, for eds validate.
+[File]
+	DescText = "broken adapter";
+	CreateDate = 13-45-2026;
+	CreateTime = 25:00:00;
+	Revision = 1.0;
+
+[Device]
+	VendCode = 65535;
+	VendName = "OT Fabric";
+	ProdType = 12;
+	ProdTypeStr = "Communications Adapter";
+	ProdCode = banana;
+	MajRev = 1;
+	MinRev = 1;
+	ProdName = "broken adapter";
+
+[Assembly]
+	Assem100 = "Input", "20 04 24 64 30 03", 4, 0x0000,,,
+		32, Param9;

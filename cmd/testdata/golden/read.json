@@ -1,0 +1,15 @@
+{
+  "attribute": 7,
+  "class": 1,
+  "class_name": "Identity",
+  "connected": false,
+  "data": "0c746573742061646170746572",
+  "instance": 1,
+  "length": 13,
+  "path": "@1/1/7",
+  "rtt_ms": "<dynamic>",
+  "service": "Get_Attribute_Single",
+  "target": "ADDR",
+  "type": "SHORT_STRING",
+  "value": "test adapter"
+}
