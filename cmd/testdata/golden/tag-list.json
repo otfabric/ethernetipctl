@@ -73,7 +73,7 @@
       "name": "Motors",
       "system": false,
       "template": 291,
-      "type": "struct 0x0123"
+      "type": "Motor"
     }
   ],
   "target": "ADDR"

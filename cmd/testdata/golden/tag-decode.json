@@ -31,6 +31,7 @@
   ],
   "handle": 48879,
   "rtt_ms": "<dynamic>",
+  "struct": "Motor",
   "tag": "Motors[0]",
   "target": "ADDR",
   "type": "struct"

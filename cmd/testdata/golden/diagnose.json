@@ -21,7 +21,7 @@
         "product_name": "test adapter",
         "revision": "3.7",
         "state": "operational",
-        "status": "",
+        "status": "0x0000",
         "vendor_id": 1
       },
       "duration_ms": "<dynamic>",

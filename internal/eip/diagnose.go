@@ -82,7 +82,7 @@ func (e Env) Diagnose(ctx context.Context, host string) (*types.DiagnoseResult, 
 				return nil, err
 			}
 			id := IdentityOf(li.Identity, true)
-			return map[string]any{"product_name": id.ProductName, "vendor_id": id.VendorID, "revision": id.Revision, "state": id.StateName, "status": id.StatusFlags}, nil
+			return map[string]any{"product_name": id.ProductName, "vendor_id": id.VendorID, "revision": id.Revision, "state": id.StateName, "status": strings.TrimSpace(fmt.Sprintf("0x%04X %s", id.Status, id.StatusFlags))}, nil
 		}},
 		{"list-services", func() (map[string]any, error) {
 			sv, err := c.ListServices(ctx)
