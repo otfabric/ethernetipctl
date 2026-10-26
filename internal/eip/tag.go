@@ -133,6 +133,9 @@ func (e Env) TagRead(ctx context.Context, host, tag string, cfg config.TagReadCo
 			return nil, WrapError(err)
 		}
 		r.Fields = fieldsOf(fs)
+		if tpl, err := lc.Template(ctx, id); err == nil {
+			r.Struct = tpl.Name
+		}
 	}
 	return r, nil
 }
@@ -346,11 +349,28 @@ func (e Env) TagList(ctx context.Context, host string, cfg config.TagListConfig)
 	} else if fatal(err) {
 		return nil, WrapError(err)
 	}
+	// Structure types are named by their template, read once per template;
+	// a template that cannot be read keeps its number.
+	names := map[uint16]string{}
 	for _, t := range tags {
 		if t.Type.IsSystem() && !cfg.System {
 			continue
 		}
 		te := types.TagEntry{Name: t.Name, Type: symbolTypeName(t.Type), Instance: t.Instance, System: t.Type.IsSystem(), Dims: []uint32{}}
+		if id := t.Type.Template(); t.Type.IsStruct() && id != logix.StringTemplate.ID {
+			name, ok := names[id]
+			if !ok {
+				if tpl, err := lc.Template(ctx, id); err == nil {
+					name = tpl.Name
+				} else if fatal(err) {
+					return nil, WrapError(err)
+				}
+				names[id] = name
+			}
+			if name != "" {
+				te.Type = name
+			}
+		}
 		for i := 0; i < t.Type.Dims() && i < len(t.Dims); i++ {
 			te.Dims = append(te.Dims, t.Dims[i])
 		}

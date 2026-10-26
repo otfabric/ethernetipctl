@@ -22,7 +22,7 @@ func fieldLines(b *strings.Builder, fs []TagField, indent string) {
 			fieldLines(b, f.Fields, indent+"  ")
 			continue
 		}
-		v := fmt.Sprint(f.Value)
+		v := valueText(f.Value)
 		if f.Value == nil {
 			v = hexDump(f.Data)
 		}
@@ -38,8 +38,10 @@ type TagReadResult struct {
 	// Handle the structure handle.
 	Type   string  `json:"type"`
 	Handle *uint16 `json:"handle,omitempty"`
-	Count  int     `json:"count"`
-	Data   string  `json:"data"`
+	// Struct is the structure's name (its template), with --decode.
+	Struct string `json:"struct,omitempty"`
+	Count  int    `json:"count"`
+	Data   string `json:"data"`
 	// Values are the elements, for atomic types and strings.
 	Values []any `json:"values,omitempty"`
 	// Fields is the decoded structure, with --decode.
@@ -50,11 +52,14 @@ type TagReadResult struct {
 // MarshalTextOutput implements format.TextMarshaler.
 func (r *TagReadResult) MarshalTextOutput() (string, error) {
 	var b strings.Builder
-	t := r.Type
-	if r.Handle != nil {
-		t += fmt.Sprintf(" handle 0x%04X", *r.Handle)
+	t := fmt.Sprintf("%s[%d]", r.Type, r.Count)
+	switch {
+	case r.Struct != "" && r.Handle != nil:
+		t = fmt.Sprintf("%s[%d] (handle 0x%04X)", r.Struct, r.Count, *r.Handle)
+	case r.Handle != nil:
+		t = fmt.Sprintf("%s handle 0x%04X[%d]", r.Type, *r.Handle, r.Count)
 	}
-	_, _ = fmt.Fprintf(&b, "%s = %s[%d] at %s in %.1f ms\n", r.Tag, t, r.Count, r.via(), r.RTTMs)
+	_, _ = fmt.Fprintf(&b, "%s = %s at %s in %.1f ms\n", r.Tag, t, r.via(), r.RTTMs)
 	for i, v := range r.Values {
 		_, _ = fmt.Fprintf(&b, "  [%d] %v\n", i, valueText(v))
 	}

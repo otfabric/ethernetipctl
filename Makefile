@@ -154,6 +154,9 @@ install: build ## Install the built binary to /usr/local/bin
 	@echo "Installing $(APP_NAME) to /usr/local/bin"
 	@sudo install -m 0755 $(BINARY) /usr/local/bin/$(APP_NAME)
 
+examples: ## Regenerate docs/examples.md: real runs of every documented command against the simulated adapter
+	@scripts/examples.sh
+
 clean: ## Clean the build artifacts
 	@echo "Cleaning build artifacts"
 	@rm -rf $(BIN_DIR) coverage.out

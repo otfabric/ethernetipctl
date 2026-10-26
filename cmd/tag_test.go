@@ -32,7 +32,7 @@ func TestTagRead(t *testing.T) {
 	copy(data[112:], cip.AppendFloat32(nil, 2.5))
 	copy(data[112+24:], append(cip.AppendUint32(nil, 4), "pump"...))
 	must(t, f.tags.Set("Motors", logix.Value{Handle: motor.Handle, Count: 2, Data: data}))
-	f.run(t, "tag", "decode", "ADDR", "Motors[1]").want(t, 0).has(t, "Speed                REAL     2.5", "Name                 STRING   pump", "Count                DINT     [0 0 0 0]")
+	f.run(t, "tag", "decode", "ADDR", "Motors[1]").want(t, 0).has(t, "Speed                REAL     2.5", `Name                 STRING   "pump"`, "Count                DINT     [0 0 0 0]")
 	f.run(t, "tag", "read", "ADDR", "Motors[1]", "--decode", "--format", "table").want(t, 0).has(t, "Motors[1].Speed", "Motors[1].Name")
 	m = f.run(t, "tag", "decode", "ADDR", "Motors[1]", "--format", "json", "--connected").want(t, 0).json(t)
 	if len(m["fields"].([]any)) != 4 || m["handle"] != float64(0xBEEF) {
@@ -110,7 +110,7 @@ func TestTagWrite(t *testing.T) {
 
 func TestTagListAndTypes(t *testing.T) {
 	f := startFixture(t)
-	f.run(t, "tag", "list", "ADDR").want(t, 0).has(t, `(project "test-project")`, "Count", "Values[10]", "Motors[2]                        struct 0x0123", "Name                             STRING")
+	f.run(t, "tag", "list", "ADDR").want(t, 0).has(t, `(project "test-project")`, "Count", "Values[10]", "Motors[2]                        Motor", "Name                             STRING")
 	m := f.run(t, "tag", "list", "ADDR", "--program", "Main", "--format", "json").want(t, 0).json(t)
 	if m["program"] != "Program:Main" || m["count"] != 1.0 {
 		t.Errorf("program tags: %v", m)
