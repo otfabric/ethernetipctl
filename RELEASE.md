@@ -1,5 +1,28 @@
 # ethernetipctl Releases
 
+## v0.2.1
+
+**Date:** 2026-10-26  
+**Previous release:** v0.2.0
+
+### Summary
+
+Built on go-ethernetip v0.2.1, which fixes the simulated adapter's discovery.
+
+### Dependencies
+
+- Built on [go-ethernetip v0.2.1](https://github.com/otfabric/go-ethernetip/releases/tag/v0.2.1).
+
+### Fixed
+
+- `adapter`: ListIdentity over UDP (what `discover` sends) could be off at random. The adapter's I/O socket could take the number of its explicit port before the UDP socket for ListIdentity was opened (seen on Windows); the adapter then answered ListIdentity over TCP only and `discover` found nothing. The UDP socket is now opened first.
+
+### Upgrade notes
+
+- None.
+
+---
+
 ## v0.2.0
 
 **Date:** 2026-10-26  
