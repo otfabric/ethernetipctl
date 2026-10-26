@@ -2,16 +2,16 @@
 
 ## v0.1.0
 
-**Date:** unreleased (released once go-ethernetip v0.1.0 is tagged)  
+**Date:** 2026-10-26  
 **Previous release:** none
 
 ### Summary
 
 The first release of ethernetipctl: an EtherNet/IP and CIP command-line originator, diagnostics tool and adapter simulator, built on go-ethernetip and following the structure and conventions of dnp3ctl (`--format text|json|table`, a JSON error object, stable exit codes, `ETHERNETIPCTL_*` environment variables).
 
-### Before tagging
+### Dependencies
 
-- go-ethernetip is not published yet: `go.mod` requires `github.com/otfabric/go-ethernetip v0.0.0` and replaces it with `../go-ethernetip`. When go-ethernetip v0.1.0 is tagged, require `v0.1.0`, **remove the replace directive**, run `go mod tidy`, and remove the temporary `sibling` job of `.github/workflows/ci.yml` (the `cross` job then needs no second checkout either). The release workflow builds from this repository alone and cannot resolve the replace.
+- Built on [go-ethernetip v0.1.0](https://github.com/otfabric/go-ethernetip/releases/tag/v0.1.0).
 
 ### Added
 

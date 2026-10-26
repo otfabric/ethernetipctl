@@ -21,7 +21,6 @@ Thank you for your interest in contributing to `ethernetipctl`! This document co
 
 - Go 1.25+ (see [go.mod](go.mod))
 - [staticcheck](https://staticcheck.dev/), [golangci-lint](https://golangci-lint.run/) and [govulncheck](https://go.dev/doc/security/vuln/) for the checks
-- A checkout of [go-ethernetip](https://github.com/otfabric/go-ethernetip) next to this repository: until go-ethernetip v0.1.0 is tagged, `go.mod` replaces the module with `../go-ethernetip`
 - No hardware: the test suite brings its own devices (see [Testing](#testing))
 
 ### Build & Test

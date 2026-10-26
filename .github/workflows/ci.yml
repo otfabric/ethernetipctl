@@ -12,9 +12,6 @@ permissions:
   id-token: write
 
 jobs:
-  # The shared workflow checks out this repository alone. It passes once go.mod requires a
-  # published go-ethernetip (v0.1.0) instead of the sibling checkout of the replace
-  # directive; until then the "sibling" job below is the check that counts.
   ci:
     uses: otfabric/.github/.github/workflows/go-ci.yml@v2
     with:
@@ -26,58 +23,14 @@ jobs:
       coverpkg: ./...
     secrets: inherit
 
-  # TEMPORARY: go.mod builds against ../go-ethernetip (replace directive) until go-ethernetip
-  # v0.1.0 is tagged. This job checks both repositories out side by side so the replace
-  # resolves, and runs what `make check` runs. Remove it, together with the replace
-  # directive, when go-ethernetip is published.
-  sibling:
-    name: Test against the go-ethernetip checkout
-    runs-on: ubuntu-latest
-    env:
-      GOWORK: "off"
-    defaults:
-      run:
-        working-directory: ethernetipctl
-    steps:
-      - uses: actions/checkout@v7
-        with:
-          path: ethernetipctl
-      - uses: actions/checkout@v7
-        with:
-          repository: otfabric/go-ethernetip
-          path: go-ethernetip
-          # A token that can read otfabric/go-ethernetip while it is private.
-          token: ${{ secrets.GO_ETHERNETIP_TOKEN || github.token }}
-      - uses: actions/setup-go@v7
-        with:
-          go-version-file: ethernetipctl/go.mod
-          cache-dependency-path: ethernetipctl/go.sum
-      - run: go vet ./...
-      - run: make coverage
-      - run: make cross
-      - run: make build-all
-
   # The shared workflow builds for 64-bit only; linux/arm/v7 is a release target, where int
-  # has 32 bits. It needs the go-ethernetip checkout as long as the replace directive does.
+  # has 32 bits.
   cross:
     name: Typecheck for 32-bit targets
     runs-on: ubuntu-latest
-    env:
-      GOWORK: "off"
-    defaults:
-      run:
-        working-directory: ethernetipctl
     steps:
       - uses: actions/checkout@v7
-        with:
-          path: ethernetipctl
-      - uses: actions/checkout@v7
-        with:
-          repository: otfabric/go-ethernetip
-          path: go-ethernetip
-          token: ${{ secrets.GO_ETHERNETIP_TOKEN || github.token }}
       - uses: actions/setup-go@v7
         with:
-          go-version-file: ethernetipctl/go.mod
-          cache-dependency-path: ethernetipctl/go.sum
+          go-version-file: go.mod
       - run: make cross

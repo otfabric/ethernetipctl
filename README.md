@@ -219,10 +219,9 @@ Run the same commands again. They always fetch the latest release, unpack it int
 
 ### Build from source
 
-Requires Go 1.25 or later. Until go-ethernetip v0.1.0 is published, `go.mod` builds against a checkout of [go-ethernetip](https://github.com/otfabric/go-ethernetip) next to this repository (a `replace` directive that goes away with that release), so clone both side by side:
+Requires Go 1.25 or later.
 
 ```console
-git clone https://github.com/otfabric/go-ethernetip.git
 git clone https://github.com/otfabric/ethernetipctl.git
 cd ethernetipctl
 make build
@@ -233,8 +232,6 @@ make build
 ```console
 go install github.com/otfabric/ethernetipctl@latest
 ```
-
-`go install …@latest` works once go-ethernetip is published and the `replace` directive is gone (v0.1.0 of ethernetipctl is released after that).
 
 ---
 
@@ -514,8 +511,6 @@ make build-all  # release binaries for every platform into release/
 ```
 
 The tests need no hardware: they start go-ethernetip servers (and Logix tag servers) on loopback and run the command tree through `cmd.Run`. See [CONTRIBUTING.md](CONTRIBUTING.md).
-
-Until go-ethernetip v0.1.0 is tagged, `go.mod` replaces it with `../go-ethernetip`; CI checks out both repositories side by side for that. The replace directive, and that CI job, go away with the published module.
 
 ## Version history
 
