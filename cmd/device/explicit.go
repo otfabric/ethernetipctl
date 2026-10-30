@@ -176,7 +176,7 @@ func newWriteCmd(g *config.Global) *cobra.Command {
 		Long: `Write one attribute of an object instance with Set_Attribute_Single.
 
 THIS CHANGES THE DEVICE. A write needs --yes: without it ethernetipctl validates the
-invocation, sends nothing and exits 3 (code confirmation_required). Know what an attribute
+invocation, sends nothing and exits 2 (code confirmation_required). Know what an attribute
 does before you write it: attributes of the TCP/IP Interface object change the address of
 the device, assembly data drives outputs.
 
@@ -259,7 +259,7 @@ func newResetCmd(g *config.Global) *cobra.Command {
 		Long: `Send the Reset service to the Identity object (class 1, instance 1).
 
 THIS RESTARTS THE DEVICE, and with --type 1 returns it to its factory defaults (its IP
-configuration included). It needs --yes: without it nothing is sent and the exit code is 3.
+configuration included). It needs --yes: without it nothing is sent and the exit code is 2.
 Type 0 (the default) emulates a power cycle.`,
 		Example: `
   ethernetipctl reset 192.168.1.10 --yes
@@ -334,7 +334,7 @@ messages: the input, output or configuration data that I/O connections exchange.
 		Long: `Write the data of an assembly with Set_Attribute_Single (attribute 3).
 
 THIS CHANGES THE DEVICE: an output assembly drives its outputs. It needs --yes: without it
-nothing is sent and the exit code is 3. Most devices refuse the write while an I/O
+nothing is sent and the exit code is 2. Most devices refuse the write while an I/O
 connection owns the assembly.`,
 		Example: `
   ethernetipctl assembly write 192.168.1.10 150 --data 0102030405060708 --yes

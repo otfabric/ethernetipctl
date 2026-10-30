@@ -10,8 +10,11 @@ const (
 	KindTimeout      Kind = "timeout"
 	KindProtocol     Kind = "protocol"
 	// KindRefused is a request the target answered and refused: a CIP general status
-	// other than success, a refused Forward_Open, an unsupported command.
-	KindRefused  Kind = "refused"
-	KindOutput   Kind = "output"
-	KindInternal Kind = "internal"
+	// other than success, a refused Forward_Open.
+	KindRefused     Kind = "refused"
+	KindOutput      Kind = "output"
+	KindInternal    Kind = "internal"
+	KindInterrupted Kind = "interrupted"
+	// KindUnsupported is an operation the peer does not support.
+	KindUnsupported Kind = "unsupported"
 )

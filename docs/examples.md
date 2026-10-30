@@ -164,7 +164,7 @@ Instance 1 (Get_Attributes_All):
 $ ethernetipctl write 127.0.0.1 @4/150/3 --data 0102030405060708091011121314151617181920212223242526272829303132
 error: write changes the target: add --yes to confirm (nothing was sent)
 $ echo $?
-3
+2
 ```
 
 ### A write

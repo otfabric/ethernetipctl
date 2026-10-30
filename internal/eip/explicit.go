@@ -274,7 +274,7 @@ func attributeResult(s *Session, m config.MessagingConfig, service cip.Service, 
 // confirm refuses a command that changes the target without --yes.
 func confirm(yes bool, what string) error {
 	if !yes {
-		return errs.InvalidInput(errs.CodeConfirmationRequired, what+" changes the target: add --yes to confirm (nothing was sent)", nil)
+		return errs.New(errs.KindUsage, errs.CodeConfirmationRequired, what+" changes the target: add --yes to confirm (nothing was sent)", nil)
 	}
 	return nil
 }

@@ -151,7 +151,7 @@ func (e Env) Diagnose(ctx context.Context, host string) (*types.DiagnoseResult, 
 	r.DurationMs = ms(time.Since(start))
 	code := errs.ExitOK
 	if !r.OK {
-		code = errs.ExitPartial
+		code = errs.ExitFindings
 	}
 	return r, code, nil
 }

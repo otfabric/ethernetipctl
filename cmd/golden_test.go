@@ -105,6 +105,6 @@ func TestGoldenJSON(t *testing.T) {
 	golden(t, "eds-inspect", run(t, "eds", "inspect", adapterEDS, "--format", "json").want(t, 0), "")
 	golden(t, "eds-validate-invalid", run(t, "eds", "validate", "../testdata/invalid.eds", "--format", "json").want(t, 3), "")
 	golden(t, "error-refused", j("read", "ADDR", "@1/1/99").want(t, 6), f.addr)
-	golden(t, "error-confirmation", j("write", "ADDR", "@1/1/1", "--data", "00").want(t, 3), f.addr)
+	golden(t, "error-confirmation", j("write", "ADDR", "@1/1/1", "--data", "00").want(t, 2), f.addr)
 	golden(t, "error-usage", run(t, "read", "--format", "json").want(t, 2), "")
 }

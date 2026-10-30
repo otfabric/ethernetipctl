@@ -162,7 +162,7 @@ func Run(ctx context.Context, args []string, stdout, stderr io.Writer) int {
 	if err != nil {
 		if !inv.HasOutputFormat {
 			// Cobra failed before the command recorded its format: honour --format (or
-			// ETHERNETIPCTL_OUTPUT_FORMAT) all the same.
+			// ETHERNETIPCTL_FORMAT) all the same.
 			if f, ok := runner.RequestedFormat(cmd, args); ok {
 				inv.SetOutputFormat(f)
 			}

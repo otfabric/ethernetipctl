@@ -121,7 +121,7 @@ stderr.
 
 A connection with output data (--output-size above 0) WRITES THE OUTPUTS OF THE DEVICE at
 every interval: zeros, or --output-data. It needs --yes; without it nothing is sent and the
-exit code is 3. --idle sends the output in idle mode, which most devices answer by holding
+exit code is 2. --idle sends the output in idle mode, which most devices answer by holding
 their outputs in their idle state. An input-only connection (--output the heartbeat point,
 --output-size 0) writes nothing and needs no --yes.
 

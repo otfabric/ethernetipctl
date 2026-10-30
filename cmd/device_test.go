@@ -94,13 +94,13 @@ func TestRead(t *testing.T) {
 func TestWrite(t *testing.T) {
 	f := startFixture(t)
 	// Without --yes nothing is sent: not even a session is opened.
-	r := f.run(t, "write", "ADDR", "@0xF5/1/8", "--type", "USINT", "--value", "5", "--format", "json").want(t, 3)
-	if kind, code := r.errorCode(t); kind != "invalid_input" || code != "confirmation_required" {
+	r := f.run(t, "write", "ADDR", "@0xF5/1/8", "--type", "USINT", "--value", "5", "--format", "json").want(t, 2)
+	if kind, code := r.errorCode(t); kind != "usage" || code != "confirmation_required" {
 		t.Errorf("write without --yes: %s %s", kind, code)
 	}
-	f.run(t, "assembly", "write", "ADDR", "150", "--data", "00").want(t, 3).errHas(t, "--yes")
-	f.run(t, "reset", "ADDR").want(t, 3)
-	f.run(t, "tag", "write", "ADDR", "Count", "--type", "DINT", "--value", "1").want(t, 3)
+	f.run(t, "assembly", "write", "ADDR", "150", "--data", "00").want(t, 2).errHas(t, "--yes")
+	f.run(t, "reset", "ADDR").want(t, 2)
+	f.run(t, "tag", "write", "ADDR", "Count", "--type", "DINT", "--value", "1").want(t, 2)
 	if n, s := f.metrics.connects.Load(), f.metrics.sets.Load(); n != 0 || s != 0 {
 		t.Fatalf("writes without --yes reached the adapter: %d sessions, %d sets", n, s)
 	}
@@ -322,21 +322,21 @@ func TestDiagnose(t *testing.T) {
 	f.run(t, "diagnose", "ADDR", "--format", "table").want(t, 0).has(t, "CHECK", "connection-manager")
 
 	// A silent listener: TCP works, RegisterSession times out, the rest is skipped.
-	r := run(t, "diagnose", silentListener(t), "--timeout", "200ms", "--format", "json").want(t, 7)
+	r := run(t, "diagnose", silentListener(t), "--timeout", "200ms", "--format", "json").want(t, 1)
 	m := r.json(t)
 	checks := m["checks"].([]any)
 	if m["ok"] != false || checks[0].(map[string]any)["status"] != "ok" || checks[1].(map[string]any)["status"] != "error" ||
 		checks[1].(map[string]any)["error"].(map[string]any)["kind"] != "timeout" || checks[2].(map[string]any)["status"] != "skipped" {
 		t.Errorf("diagnose of a silent listener: %s", r.stdout)
 	}
-	run(t, "diagnose", refusedAddr(t), "--timeout", "1s").want(t, 7).has(t, "ERROR   tcp-connect", "SKIPPED register-session")
+	run(t, "diagnose", refusedAddr(t), "--timeout", "1s").want(t, 1).has(t, "ERROR   tcp-connect", "SKIPPED register-session")
 	run(t, "diagnose", "300.0.0.1").want(t, 3)
 
 	// A device without the TCP/IP Interface and Ethernet Link objects fails those checks.
 	f.srv.RegisterObject(server.NewObject(cip.ClassTCPIPInterface, 1))
 	f.srv.RegisterObject(server.NewObject(cip.ClassEthernetLink, 1))
 	f.srv.RegisterObject(server.NewObject(cip.ClassConnectionManager, 1))
-	f.run(t, "diagnose", "ADDR").want(t, 7).has(t, "5 passed, 3 failed", "ERROR   tcpip-interface", "ERROR   ethernet-link", "ERROR   connection-manager")
+	f.run(t, "diagnose", "ADDR").want(t, 1).has(t, "5 passed, 3 failed", "ERROR   tcpip-interface", "ERROR   ethernet-link", "ERROR   connection-manager")
 }
 
 func TestDiscover(t *testing.T) {
@@ -378,10 +378,10 @@ func TestErrorKinds(t *testing.T) {
 	// --debug traces go-ethernetip's log to stderr.
 	f := startFixture(t)
 	f.run(t, "identify", "ADDR", "--debug").want(t, 0).errHas(t, "level=")
-	// An interrupted command is an internal error (10).
+	// An interrupted command exits 130.
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
-	runCtx(t, ctx, "identify", silentListener(t)).want(t, 10)
+	runCtx(t, ctx, "identify", silentListener(t)).want(t, 130)
 	// A result that cannot be written is an output error (10).
 	var stderr syncBuffer
 	if code := Run(context.Background(), []string{"identify", f.addr}, failingWriter{}, &stderr); code != 10 {
