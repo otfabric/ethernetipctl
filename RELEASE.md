@@ -1,5 +1,16 @@
 # ethernetipctl Releases
 
+## v0.4.0
+
+**Date:** 2026-10-30
+**Previous release:** v0.3.0
+
+### Dependencies
+
+- `go-ethernetip` v0.3.0 → v0.3.2.
+
+---
+
 ## v0.3.0
 
 **Date:** 2026-10-30
