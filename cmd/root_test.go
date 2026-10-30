@@ -26,7 +26,7 @@ func TestVersionHelpAndUsage(t *testing.T) {
 	run(t, "eds").want(t, 0).has(t, "inspect", "validate", "generate", "codegen")
 	run(t, "tag").want(t, 0).has(t, "read", "write", "list", "types", "decode", "Rockwell")
 	run(t, "assembly").want(t, 0).has(t, "read", "write")
-	run(t, "write", "--help").want(t, 0).has(t, "THIS CHANGES THE DEVICE", "--yes", "ETHERNETIPCTL_OUTPUT_FORMAT", "--route")
+	run(t, "write", "--help").want(t, 0).has(t, "THIS CHANGES THE DEVICE", "--yes", "ETHERNETIPCTL_FORMAT", "--route")
 	run(t, "tag", "read", "--help").want(t, 0).has(t, "Rockwell Automation Logix", "vendor specific")
 
 	run(t, "nope").want(t, 2).errHas(t, `error: unknown command "nope"`)
@@ -41,7 +41,7 @@ func TestVersionHelpAndUsage(t *testing.T) {
 }
 
 // A usage error (what Cobra rejects before the command runs) is the JSON error object on
-// stdout when the invocation asks for JSON, by --format or ETHERNETIPCTL_OUTPUT_FORMAT, and
+// stdout when the invocation asks for JSON, by --format or ETHERNETIPCTL_FORMAT, and
 // the text error line on stderr otherwise. Either way the exit code is 2.
 func TestUsageErrorsHonourFormat(t *testing.T) {
 	for _, c := range []struct {

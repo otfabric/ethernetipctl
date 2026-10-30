@@ -266,7 +266,7 @@ A device is named as `host[:port]`: an IPv4 address or a host name, port 44818 u
 
 | Global flag | Meaning |
 |---|---|
-| `--format text\|json\|table` | Output format of stdout (`ETHERNETIPCTL_OUTPUT_FORMAT`) |
+| `--format text\|json\|table` | Output format of stdout (`ETHERNETIPCTL_FORMAT`) |
 | `--timeout D` | Timeout of connecting and of each request, e.g. `500ms`, `5s` (default 5s; `ETHERNETIPCTL_TIMEOUT`) |
 | `--port N` | Port of a host without one (default 44818; `ETHERNETIPCTL_PORT`) |
 | `--debug` | go-ethernetip's protocol log on stderr, and the causes of an error |
@@ -467,7 +467,7 @@ The adapter answers sessions, ListIdentity (TCP and UDP), explicit messages (unc
 
 ## Safety
 
-- **Writes need explicit intent.** `write`, `reset`, `assembly write`, `tag write` and `io` with output data (`--output-size` above 0) do nothing without `--yes`: they validate the invocation, open no connection, send nothing and exit `3` (`confirmation_required`). `--yes` has no environment variable on purpose.
+- **Writes need explicit intent.** `write`, `reset`, `assembly write`, `tag write` and `io` with output data (`--output-size` above 0) do nothing without `--yes`: they validate the invocation, open no connection, send nothing and exit `2` (`confirmation_required`). `--yes` has no environment variable on purpose.
 - **No scanning.** `discover` sends one ListIdentity datagram to the one address you give (a broadcast address reaches one segment); every other command talks to one device. Prefixes, ranges, lists and wildcards are refused.
 - **Requests are never repeated.** After a timeout, a write may or may not have been executed: read back before you write again.
 - **I/O connections write outputs.** An exclusive-owner connection sends output data at every RPI, zeros until `--output-data` is applied; `--idle` sends it in idle mode. Use an input-only connection (`--output` the heartbeat point, `--output-size 0`) to watch inputs without writing anything.
@@ -495,13 +495,15 @@ Every command writes `--format json`: one indented document, or JSON Lines for t
 | Exit code | Meaning |
 |---|---|
 | 0 | Success |
+| 1 | Findings: `diagnose` with a failed or skipped check |
 | 2 | Usage: unknown command or flag, missing argument |
 | 3 | Invalid input (nothing sent), a change without `--yes`, `eds validate` of a file with errors |
 | 4 | Transport: connection refused or lost, cannot listen |
 | 5 | Timeout: no answer, or an I/O connection timed out |
 | 6 | Refused by the target (CIP status) or protocol error |
-| 7 | Partial: `diagnose` with a failed or skipped check |
-| 10 | Output or internal error, interrupted |
+| 8 | Unsupported by the peer |
+| 10 | Output or internal error |
+| 130 | Interrupted before a result |
 
 See [docs/json-output.md](docs/json-output.md) (field conventions, a stable contract) and [docs/exitcodes.md](docs/exitcodes.md) (every kind and code).
 
@@ -511,7 +513,7 @@ See [docs/json-output.md](docs/json-output.md) (field conventions, a stable cont
 
 | Variable | Flag |
 |---|---|
-| `ETHERNETIPCTL_OUTPUT_FORMAT` | `--format` |
+| `ETHERNETIPCTL_FORMAT` (`ETHERNETIPCTL_OUTPUT_FORMAT` stays accepted) | `--format` |
 | `ETHERNETIPCTL_TIMEOUT` | `--timeout` |
 | `ETHERNETIPCTL_PORT` | `--port` |
 | `ETHERNETIPCTL_ROUTE` | `--route` |

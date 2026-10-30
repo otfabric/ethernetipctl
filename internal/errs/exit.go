@@ -3,13 +3,16 @@ package errs
 // Process exit codes (single mapping from Kind for fatals).
 const (
 	ExitOK           = 0
+	ExitFindings     = 1
 	ExitUsage        = 2
 	ExitInvalidInput = 3
 	ExitTransport    = 4
 	ExitTimeout      = 5
 	ExitProtocol     = 6
 	ExitPartial      = 7
+	ExitUnsupported  = 8
 	ExitInternal     = 10
+	ExitInterrupted  = 130
 )
 
 // ExitCodeForKind maps Kind to exit code for fatal errors.
@@ -25,6 +28,10 @@ func ExitCodeForKind(k Kind) int {
 		return ExitTimeout
 	case KindProtocol, KindRefused:
 		return ExitProtocol
+	case KindUnsupported:
+		return ExitUnsupported
+	case KindInterrupted:
+		return ExitInterrupted
 	case KindOutput, KindInternal:
 		return ExitInternal
 	default:

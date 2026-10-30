@@ -98,7 +98,7 @@ clears that bit with Read-Modify-Write: --type is then the integer type of the t
 --value 0 or 1.
 
 THIS CHANGES THE CONTROLLER'S DATA, which its program acts on. It needs --yes: without it
-nothing is sent and the exit code is 3.
+nothing is sent and the exit code is 2.
 
 ` + vendorNote,
 		Example: `

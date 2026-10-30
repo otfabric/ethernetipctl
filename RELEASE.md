@@ -1,5 +1,31 @@
 # ethernetipctl Releases
 
+## v0.3.0
+
+**Date:** unreleased
+**Previous release:** v0.2.2
+
+### Summary
+
+**Breaking for scripts:** the exit codes follow the OT Fabric organisation table (ADR-0006 of otfabric/engineering). Nothing else changes in the commands.
+
+### Exit codes
+
+| Case | Old | New | JSON error |
+|---|---|---|---|
+| `context_canceled` (interrupted before a result) | 10 | 130 | kind `interrupted`, was `internal` |
+| `unsupported` | 6 | 8 | kind `unsupported`, was `refused` |
+| `confirmation_required` (no `--yes`) | 3 | 2 | kind `usage`, was `invalid_input` |
+| `diagnose` with a failed or skipped check | 7 | 1 | the report is unchanged |
+
+Every other exit code is unchanged. See [docs/exitcodes.md](docs/exitcodes.md).
+
+### Environment
+
+`ETHERNETIPCTL_FORMAT` is now the canonical name of the format variable; `ETHERNETIPCTL_OUTPUT_FORMAT` stays accepted, and `ETHERNETIPCTL_FORMAT` wins when both are set.
+
+---
+
 ## v0.2.2
 
 **Date:** 2026-10-26  

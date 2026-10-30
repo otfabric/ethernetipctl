@@ -12,7 +12,7 @@ const (
 
 // Global holds the flags every command has: the persistent flags of the root command.
 type Global struct {
-	OutputFormat string        `env:"ETHERNETIPCTL_OUTPUT_FORMAT" desc:"Output format: text, json, or table" flag:"format"`
+	OutputFormat string        `env:"ETHERNETIPCTL_FORMAT" desc:"Output format: text, json, or table" flag:"format"`
 	Timeout      time.Duration `env:"ETHERNETIPCTL_TIMEOUT" desc:"Timeout of connecting and of each request (e.g. 500ms, 5s)" flag:"timeout"`
 	Port         uint16        `env:"ETHERNETIPCTL_PORT" desc:"Port of the target when the host names none (44818)" flag:"port"`
 	Debug        bool          `desc:"Log go-ethernetip's protocol trace to stderr, and show the causes of an error" flag:"debug"`

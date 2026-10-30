@@ -57,11 +57,11 @@ func WrapError(err error) error {
 		return e
 	case errors.As(err, &encapErr):
 		if errors.Is(err, ethernetip.ErrUnsupported) {
-			return errs.New(errs.KindRefused, errs.CodeUnsupported, fmt.Sprintf("the target does not support the command: %s", trimPrefix(encapErr.Error())), err)
+			return errs.New(errs.KindUnsupported, errs.CodeUnsupported, fmt.Sprintf("the target does not support the command: %s", trimPrefix(encapErr.Error())), err)
 		}
 		return errs.New(errs.KindProtocol, errs.CodeSessionRefused, fmt.Sprintf("the target refused the session: %s", trimPrefix(encapErr.Error())), err)
 	case errors.Is(err, context.Canceled):
-		return errs.New(errs.KindInternal, errs.CodeContextCanceled, "interrupted", err)
+		return errs.New(errs.KindInterrupted, errs.CodeContextCanceled, "interrupted", err)
 	case errors.Is(err, ethernetip.ErrTimeout), errors.Is(err, context.DeadlineExceeded):
 		return errs.New(errs.KindTimeout, errs.CodeRequestTimeout, fmt.Sprintf("timeout: no answer from the target: %s", trimPrefix(err.Error())), err)
 	case errors.Is(err, ethernetip.ErrConnectFailed):
@@ -75,7 +75,7 @@ func WrapError(err error) error {
 	case errors.Is(err, ethernetip.ErrBusy):
 		return errs.New(errs.KindProtocol, errs.CodeRequestBusy, fmt.Sprintf("protocol error: %s", trimPrefix(err.Error())), err)
 	case errors.Is(err, ethernetip.ErrUnsupported):
-		return errs.New(errs.KindRefused, errs.CodeUnsupported, fmt.Sprintf("unsupported: %s", trimPrefix(err.Error())), err)
+		return errs.New(errs.KindUnsupported, errs.CodeUnsupported, fmt.Sprintf("unsupported: %s", trimPrefix(err.Error())), err)
 	case errors.Is(err, ethernetip.ErrInvalidOption), errors.Is(err, logix.ErrTagName), errors.Is(err, logix.ErrType), errors.Is(err, cip.ErrTooLarge):
 		return errs.InvalidInput(errs.CodeInvalidInput, fmt.Sprintf("invalid input: %s", trimPrefix(err.Error())), err)
 	}

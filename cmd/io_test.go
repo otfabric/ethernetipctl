@@ -34,8 +34,8 @@ func TestIOInputOnly(t *testing.T) {
 
 func TestIOOutputNeedsYes(t *testing.T) {
 	f := startFixture(t)
-	r := f.run(t, append(ioArgs("150", "32"), "--format", "json")...).want(t, 3)
-	if kind, code := r.errorCode(t); kind != "invalid_input" || code != "confirmation_required" {
+	r := f.run(t, append(ioArgs("150", "32"), "--format", "json")...).want(t, 2)
+	if kind, code := r.errorCode(t); kind != "usage" || code != "confirmation_required" {
 		t.Errorf("io without --yes: %s %s", kind, code)
 	}
 	f.run(t, ioArgs("152", "0", "--output-data", "00")...).want(t, 3)
