@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+
 // Package eds holds `ethernetipctl eds …`: Electronic Data Sheets.
 package eds
 

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+
 package eip
 
 import (
@@ -68,6 +70,9 @@ func Decode(t cip.DataType, data []byte) (any, error) {
 		return s, nil
 	}
 	size := t.Size()
+	if size == 0 {
+		return nil, invalid(errs.CodeInvalidValue, "%s has no fixed size: cannot decode it", t)
+	}
 	if len(data) == 0 || len(data)%size != 0 {
 		return nil, invalid(errs.CodeInvalidValue, "%d octets of data are not a whole number of %s values (%d octets each)", len(data), t, size)
 	}

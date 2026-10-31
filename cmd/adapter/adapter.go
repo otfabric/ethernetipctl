@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+
 // Package adapter holds `ethernetipctl adapter`: the simulated EtherNet/IP adapter.
 package adapter
 

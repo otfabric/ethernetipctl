@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+
 // Package eip runs the operations of ethernetipctl with go-ethernetip and turns their
 // outcome into the result types of package types, and their failures into typed errors.
 package eip
