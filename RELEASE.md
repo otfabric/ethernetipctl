@@ -1,5 +1,17 @@
 # ethernetipctl Releases
 
+## v0.4.1
+
+**Date:** 2026-10-31
+**Previous release:** v0.4.0
+
+### Fixed
+
+- Divide-by-zero in `eip.Decode` for a type with no size, found by fuzzing. Not reachable from the CLI today, because `ParseType` filters types.
+- Built on go-ethernetip v0.3.4.
+
+---
+
 ## v0.4.0
 
 **Date:** 2026-10-30
