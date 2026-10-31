@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+
 // Package tag holds `ethernetipctl tag …`: the Rockwell Logix tag services.
 package tag
 

@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+
 // Package device holds the commands that talk to one EtherNet/IP device with explicit
 // messages: identify, read, write, objects, sessions, connections and diagnostics.
 package device

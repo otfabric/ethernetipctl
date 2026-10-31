@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: MIT
+
 // Package adapter runs the simulated EtherNet/IP adapter of `ethernetipctl adapter`: a
 // go-ethernetip server built from a model (YAML or JSON) or from flags.
 package adapter
