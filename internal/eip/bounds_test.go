@@ -110,3 +110,15 @@ func TestEDSGenerateControlCharacters(t *testing.T) {
 		t.Fatalf("plain text: %v", err)
 	}
 }
+
+// A failed write is an output error, not a written file (/dev/full takes
+// the open and refuses every write).
+func TestWriteOutputWriteFails(t *testing.T) {
+	if runtime.GOOS != "linux" {
+		t.Skip("/dev/full is Linux")
+	}
+	_, err := WriteOutput("/dev/full", "EDS", []byte("x"), true)
+	if codeOf(err) != errs.CodeOutputFileWriteFailed {
+		t.Fatalf("write to /dev/full: %v", err)
+	}
+}
