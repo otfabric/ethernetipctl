@@ -1,6 +1,7 @@
 package eip
 
 import (
+	"context"
 	"errors"
 	"math"
 	"os"
@@ -130,5 +131,12 @@ func TestTagWriteBitWidth(t *testing.T) {
 		if codeOf(err) != want {
 			t.Errorf("%s: %v", tag, err)
 		}
+	}
+}
+
+// A program-scoped name needs the tag after the program.
+func TestTemplateOfHandleProgramWithoutTag(t *testing.T) {
+	if _, err := templateOfHandle(context.Background(), nil, "Program:Main"); codeOf(err) != errs.CodeInvalidPath {
+		t.Fatalf("Program:Main: %v", err)
 	}
 }
