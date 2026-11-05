@@ -10,7 +10,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"runtime"
 	"strconv"
 	"strings"
 	"time"
@@ -341,11 +340,10 @@ func WriteOutput(path, kind string, data []byte, force bool) (*types.FileResult,
 		}
 		return nil, errs.Output(errs.CodeOutputFileCreateFailed, err)
 	}
-	// A file replaced with --force keeps its old mode otherwise.
-	if err := f.Chmod(0o600); err != nil && runtime.GOOS != "windows" {
-		_ = f.Close()
-		return nil, errs.Output(errs.CodeOutputFileCreateFailed, err)
-	}
+	// A file replaced with --force keeps its old mode otherwise. Best
+	// effort: the file is the operator's, who asked to replace it, and
+	// Windows has no such modes.
+	_ = f.Chmod(0o600)
 	if _, err := f.Write(data); err != nil {
 		_ = f.Close()
 		return nil, errs.Output(errs.CodeOutputFileWriteFailed, err)

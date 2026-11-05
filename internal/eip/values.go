@@ -215,11 +215,8 @@ func twos(v int64) uint64 {
 	if v >= 0 {
 		return uint64(v)
 	}
-	n := -(v + 1) // at most MaxInt64
-	if n < 0 {
-		return 0
-	}
-	return ^uint64(n)
+	// -(v+1) is at most MaxInt64: the max only shows that to the linter.
+	return ^uint64(max(-(v + 1), 0))
 }
 
 // appendLE appends the low bits of v, little-endian.

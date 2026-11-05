@@ -90,3 +90,23 @@ func TestWriteOutputMode(t *testing.T) {
 		t.Errorf("mode %v, want 0600", fi.Mode().Perm())
 	}
 }
+
+// Names of assemblies and connections are EDS strings: one line.
+func TestEDSGenerateControlCharacters(t *testing.T) {
+	base := config.EDSGenerateConfig{VendorID: 1, ProductName: "p", Revision: "1.1"}
+	for name, mod := range map[string]func(*config.EDSGenerateConfig){
+		"assembly name":   func(c *config.EDSGenerateConfig) { c.Assemblies = []string{"100:4:two\tparts"} },
+		"connection name": func(c *config.EDSGenerateConfig) { c.Connections = []string{"0:150:100:4:4:10ms:a\x00b"} },
+		"vendor name":     func(c *config.EDSGenerateConfig) { c.VendorName = "a\rb" },
+		"description":     func(c *config.EDSGenerateConfig) { c.Description = "a\nb" },
+	} {
+		c := base
+		mod(&c)
+		if _, err := CheckEDSGenerate(c); codeOf(err) != errs.CodeInvalidValue {
+			t.Errorf("%s: %v", name, err)
+		}
+	}
+	if _, err := CheckEDSGenerate(base); err != nil {
+		t.Fatalf("plain text: %v", err)
+	}
+}
