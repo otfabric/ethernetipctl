@@ -11,18 +11,18 @@ import (
 	"github.com/spf13/pflag"
 )
 
-var durationType = reflect.TypeOf(time.Duration(0))
+var durationType = reflect.TypeFor[time.Duration]()
 
 // RegisterFlags binds cobra flags to tagged fields on cfg (pointer to struct).
 // Numeric and bool fields use reflect.Value.Addr().Interface().(*T) with the matching
 // pflag *Var function — no unsafe.Pointer casts. Supported kinds: string, bool, []string,
 // uint8–uint64, int, int8–int64, uint and time.Duration.
-func RegisterFlags(cmd *cobra.Command, cfg interface{}) {
+func RegisterFlags(cmd *cobra.Command, cfg any) {
 	RegisterFlagSet(cmd.Flags(), cfg)
 }
 
 // RegisterFlagSet is [RegisterFlags] on a flag set: the root's persistent flags.
-func RegisterFlagSet(fs *pflag.FlagSet, cfg interface{}) {
+func RegisterFlagSet(fs *pflag.FlagSet, cfg any) {
 	v := reflect.ValueOf(cfg).Elem()
 	t := v.Type()
 

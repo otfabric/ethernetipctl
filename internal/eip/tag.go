@@ -148,11 +148,11 @@ func templateOfHandle(ctx context.Context, lc *logix.Client, tag string) (uint16
 	name := strings.TrimSpace(tag)
 	program, rest := "", name
 	if strings.HasPrefix(strings.ToLower(name), "program:") {
-		i := strings.Index(name, ".")
-		if i < 0 {
+		before, after, ok := strings.Cut(name, ".")
+		if !ok {
 			return 0, invalid(errs.CodeInvalidPath, "invalid tag name %q", name)
 		}
-		program, rest = name[:i], name[i+1:]
+		program, rest = before, after
 	}
 	base := rest
 	if i := strings.IndexAny(rest, ".["); i >= 0 {

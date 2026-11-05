@@ -81,8 +81,7 @@ func WrapError(err error) error {
 	case errors.Is(err, ethernetip.ErrInvalidOption), errors.Is(err, logix.ErrTagName), errors.Is(err, logix.ErrType), errors.Is(err, cip.ErrTooLarge):
 		return errs.InvalidInput(errs.CodeInvalidInput, fmt.Sprintf("invalid input: %s", trimPrefix(err.Error())), err)
 	}
-	var netErr net.Error
-	if errors.As(err, &netErr) {
+	if _, ok := errors.AsType[net.Error](err); ok {
 		return errs.New(errs.KindTransport, errs.CodeConnectionLost, fmt.Sprintf("connection error: %v", err), err)
 	}
 	return errs.Internal(err)

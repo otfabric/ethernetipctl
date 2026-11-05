@@ -340,7 +340,7 @@ func addTag(ts *logix.TagServer, t Tag) error {
 		return fmt.Errorf("a structure tag has no initial value in the model")
 	case "REAL", "LREAL":
 		var fs []float64
-		for _, p := range strings.Split(t.Value, ",") {
+		for p := range strings.SplitSeq(t.Value, ",") {
 			f, perr := strconv.ParseFloat(strings.TrimSpace(p), 64)
 			if perr != nil {
 				return fmt.Errorf("value %q", p)
@@ -351,7 +351,7 @@ func addTag(ts *logix.TagServer, t Tag) error {
 		v, err = logix.Floats(dt, fs...)
 	default:
 		var is []int64
-		for _, p := range strings.Split(t.Value, ",") {
+		for p := range strings.SplitSeq(t.Value, ",") {
 			n, perr := strconv.ParseInt(strings.TrimSpace(p), 0, 64)
 			if perr != nil {
 				return fmt.Errorf("value %q", p)

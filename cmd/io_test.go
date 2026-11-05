@@ -90,8 +90,7 @@ func TestIOOutputEchoed(t *testing.T) {
 
 func TestIOTimeout(t *testing.T) {
 	f := startFixture(t)
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	ctx := t.Context()
 	done := make(chan result, 1)
 	var stdout, stderr syncBuffer
 	args := ioArgs("152", "0", "--timeout", "5s")

@@ -19,7 +19,7 @@ Thank you for your interest in contributing to `ethernetipctl`! This document co
 
 ### Prerequisites
 
-- Go 1.25+ (see [go.mod](go.mod))
+- Go 1.26+ (see [go.mod](go.mod))
 - [staticcheck](https://staticcheck.dev/), [golangci-lint](https://golangci-lint.run/) and [govulncheck](https://go.dev/doc/security/vuln/) for the checks
 - No hardware: the test suite brings its own devices (see [Testing](#testing))
 

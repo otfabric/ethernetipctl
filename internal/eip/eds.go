@@ -185,7 +185,7 @@ func parseSpecConnection(s string) (eds.SpecConnection, error) {
 		return eds.SpecConnection{}, bad
 	}
 	var n [5]uint64
-	for i := 0; i < 5; i++ {
+	for i := range 5 {
 		v, err := strconv.ParseUint(strings.TrimSpace(parts[i]), 0, 32)
 		if err != nil {
 			return eds.SpecConnection{}, bad
