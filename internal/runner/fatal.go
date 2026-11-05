@@ -18,7 +18,7 @@ import (
 func RenderFatal(inv *Invocation, err error, stdout, stderr io.Writer, debug bool) int {
 	code := fatalExitCode(err)
 	if inv != nil && inv.HasOutputFormat && inv.OutputFormat == format.FormatJSON {
-		if err := writeFatalJSON(stdout, stderr, err, debug); err != nil {
+		if err := writeFatalJSON(stdout, stderr, err, debug, inv.Stream); err != nil {
 			_, _ = fmt.Fprintf(stderr, "error: failed to render JSON fatal: %v\n", err)
 			return errs.ExitInternal
 		}
@@ -43,11 +43,15 @@ func writeFatalText(w io.Writer, err error, debug bool) {
 	}
 }
 
-func writeFatalJSON(stdout, stderr io.Writer, err error, debug bool) error {
+// writeFatalJSON writes the error envelope: indented like every document,
+// or on one compact line after the records of a stream (JSON Lines).
+func writeFatalJSON(stdout, stderr io.Writer, err error, debug, compact bool) error {
 	env := types.ErrorEnvelope{Error: errorInfoFromErr(err)}
 	var buf bytes.Buffer
 	enc := json.NewEncoder(&buf)
-	enc.SetIndent("", "  ")
+	if !compact {
+		enc.SetIndent("", "  ")
+	}
 	if jerr := enc.Encode(env); jerr != nil {
 		_, _ = fmt.Fprintf(stderr, "error: failed to encode error envelope: %v\n", jerr)
 		return jerr

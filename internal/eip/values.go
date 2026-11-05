@@ -199,7 +199,7 @@ func encodeOne(b []byte, t cip.DataType, s string) ([]byte, error) {
 		if err != nil {
 			return nil, bad(err)
 		}
-		return appendLE(b, uint64(v), signedBits[t]), nil
+		return appendLE(b, twos(v), signedBits[t]), nil
 	case unsignedBits[t] > 0:
 		v, err := strconv.ParseUint(s, 0, unsignedBits[t])
 		if err != nil {
@@ -210,10 +210,19 @@ func encodeOne(b []byte, t cip.DataType, s string) ([]byte, error) {
 	return nil, invalid(errs.CodeInvalidValue, "cannot encode type %s", t)
 }
 
+// twos returns the two's complement bits of v; appendLE keeps the low ones.
+func twos(v int64) uint64 {
+	if v >= 0 {
+		return uint64(v)
+	}
+	// -(v+1) is at most MaxInt64: the max only shows that to the linter.
+	return ^uint64(max(-(v + 1), 0))
+}
+
 // appendLE appends the low bits of v, little-endian.
 func appendLE(b []byte, v uint64, bits int) []byte {
 	for i := 0; i < bits/8; i++ {
-		b = append(b, byte(v>>(8*i)))
+		b = append(b, byte(v>>(8*i)&0xFF))
 	}
 	return b
 }

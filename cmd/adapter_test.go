@@ -29,7 +29,7 @@ func startAdapter(t *testing.T, args ...string) *adapterRun {
 		a.done <- Run(ctx, append([]string{"adapter", "--listen", "127.0.0.1:0", "--io-address", "127.0.0.1:0", "--format", "json"}, args...), &a.stdout, &a.stderr)
 	}()
 	eventually(t, "the listening event", func() bool {
-		for _, line := range strings.Split(a.stdout.String(), "\n") {
+		for line := range strings.SplitSeq(a.stdout.String(), "\n") {
 			var ev map[string]any
 			if json.Unmarshal([]byte(line), &ev) == nil && ev["event"] == "listening" {
 				a.addr = ev["address"].(string)

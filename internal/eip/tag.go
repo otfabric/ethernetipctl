@@ -148,11 +148,11 @@ func templateOfHandle(ctx context.Context, lc *logix.Client, tag string) (uint16
 	name := strings.TrimSpace(tag)
 	program, rest := "", name
 	if strings.HasPrefix(strings.ToLower(name), "program:") {
-		i := strings.Index(name, ".")
-		if i < 0 {
+		before, after, ok := strings.Cut(name, ".")
+		if !ok {
 			return 0, invalid(errs.CodeInvalidPath, "invalid tag name %q", name)
 		}
-		program, rest = name[:i], name[i+1:]
+		program, rest = before, after
 	}
 	base := rest
 	if i := strings.IndexAny(rest, ".["); i >= 0 {
@@ -216,45 +216,39 @@ func tagValue(typ, value string) (logix.Value, []any, error) {
 	}
 	parts := strings.Split(value, ",")
 	var vals []any
-	switch {
-	case t.IsFloat():
-		fs := make([]float64, 0, len(parts))
-		for _, p := range parts {
-			f, err := strconv.ParseFloat(strings.TrimSpace(p), 64)
-			if err != nil {
-				return logix.Value{}, nil, invalid(errs.CodeInvalidValue, "invalid %s value %q", t, p)
-			}
-			fs = append(fs, f)
-			vals = append(vals, f)
-		}
-		v, err := logix.Floats(t, fs...)
-		return v, vals, wrapValueErr(err)
-	default:
+	if t == cip.TypeBOOL {
+		// Logix stores true as 0xFF: the library encodes BOOL.
 		is := make([]int64, 0, len(parts))
 		for _, p := range parts {
 			p = strings.TrimSpace(p)
-			var n int64
-			if t == cip.TypeBOOL {
-				b, err := parseBool(p)
-				if err != nil {
-					return logix.Value{}, nil, invalid(errs.CodeInvalidValue, "invalid BOOL value %q: %v", p, err)
-				}
-				if b {
-					n = 1
-				}
-				vals = append(vals, b)
-			} else {
-				var err error
-				if n, err = strconv.ParseInt(p, 0, 64); err != nil {
-					return logix.Value{}, nil, invalid(errs.CodeInvalidValue, "invalid %s value %q", t, p)
-				}
-				vals = append(vals, n)
+			b, err := parseBool(p)
+			if err != nil {
+				return logix.Value{}, nil, invalid(errs.CodeInvalidValue, "invalid BOOL value %q: %v", p, err)
 			}
+			var n int64
+			if b {
+				n = 1
+			}
+			vals = append(vals, b)
 			is = append(is, n)
 		}
 		v, err := logix.Ints(t, is...)
 		return v, vals, wrapValueErr(err)
 	}
+	// Every other type is encoded as `write` encodes it: in the type's own
+	// range (a REAL beyond float32 is refused, not stored as infinity; ULINT
+	// and LWORD take their whole unsigned range).
+	var data []byte
+	for _, p := range parts {
+		if data, err = encodeOne(data, t, strings.TrimSpace(p)); err != nil {
+			return logix.Value{}, nil, err
+		}
+	}
+	r := cip.NewReader(data)
+	for range parts {
+		vals = append(vals, decodeOne(t, r))
+	}
+	return logix.Value{Type: t, Count: len(parts), Data: data}, vals, nil
 }
 
 func wrapValueErr(err error) error {
@@ -284,6 +278,9 @@ func CheckTagWrite(tag string, cfg config.TagWriteConfig) (logix.TagPath, logix.
 		x, _ := v.Int(0)
 		if x != 0 && x != 1 {
 			return tp, logix.Value{}, nil, invalid(errs.CodeInvalidValue, "a bit is written with 0 or 1, not %d", x)
+		}
+		if tp.Bit >= 8*v.Type.Size() {
+			return tp, logix.Value{}, nil, invalid(errs.CodeInvalidValue, "bit %d is beyond the %d bits of %s", tp.Bit, 8*v.Type.Size(), v.Type)
 		}
 	}
 	return tp, v, vals, confirm(cfg.Yes, "tag write")

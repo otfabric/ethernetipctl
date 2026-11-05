@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/otfabric/go-ethernetip/eds"
+	"github.com/otfabric/go-ethernetip/server"
 )
 
 const adapterEDS = "../testdata/otfabric_adapter.eds"
@@ -121,4 +122,13 @@ func TestEDSGenerate(t *testing.T) {
 	} {
 		run(t, append([]string{"eds", "generate"}, args...)...).want(t, 3)
 	}
+}
+
+// A device whose product name holds a newline gets no EDS that would not
+// parse: the command fails with a protocol error (exit 6).
+func TestEDSGenerateFromDeviceControlCharacter(t *testing.T) {
+	id := testIdentity
+	id.ProductName = "two\nlines"
+	fx := startFixture(t, server.WithIdentity(id))
+	run(t, "eds", "generate", "--from-device", fx.addr, "--date", "2026-01-02T03:04:05Z").want(t, 6)
 }

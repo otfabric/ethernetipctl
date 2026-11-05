@@ -1,6 +1,6 @@
 # ethernetipctl — EtherNet/IP & CIP Command-Line Tool: Discover, Identify, Read & Write Attributes, I/O Connections, Logix Tags, EDS Files & Adapter Simulator
 
-[![Go Version](https://img.shields.io/badge/Go-1.25+-00ADD8?style=flat&logo=go)](https://go.dev/)
+[![Go Version](https://img.shields.io/badge/Go-1.26+-00ADD8?style=flat&logo=go)](https://go.dev/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![CI Status](https://github.com/otfabric/ethernetipctl/actions/workflows/ci.yml/badge.svg)](https://github.com/otfabric/ethernetipctl/actions/workflows/ci.yml)
 [![Code Coverage](https://codecov.io/gh/otfabric/ethernetipctl/graph/badge.svg)](https://codecov.io/gh/otfabric/ethernetipctl)
@@ -227,7 +227,7 @@ Run the same commands again. They always fetch the latest release, unpack it int
 
 ### Build from source
 
-Requires Go 1.25 or later.
+Requires Go 1.26 or later.
 
 ```console
 git clone https://github.com/otfabric/ethernetipctl.git

@@ -63,7 +63,7 @@ func checkHost(host string) error {
 		}
 		return nil
 	}
-	for _, label := range strings.Split(host, ".") {
+	for label := range strings.SplitSeq(host, ".") {
 		if label == "" || len(label) > 63 {
 			return fmt.Errorf("%q is neither an IPv4 address nor a host name", host)
 		}

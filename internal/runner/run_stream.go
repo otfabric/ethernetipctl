@@ -19,6 +19,9 @@ func RunStream(cmd *cobra.Command, outputFormat string, validate func() error, r
 	if err != nil {
 		return err
 	}
+	if inv := InvocationFrom(cmd.Context()); inv != nil {
+		inv.Stream = true
+	}
 	if err := validate(); err != nil {
 		return errs.WrapValidation(err)
 	}

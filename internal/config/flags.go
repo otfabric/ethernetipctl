@@ -11,18 +11,18 @@ import (
 	"github.com/spf13/pflag"
 )
 
-var durationType = reflect.TypeOf(time.Duration(0))
+var durationType = reflect.TypeFor[time.Duration]()
 
 // RegisterFlags binds cobra flags to tagged fields on cfg (pointer to struct).
 // Numeric and bool fields use reflect.Value.Addr().Interface().(*T) with the matching
 // pflag *Var function — no unsafe.Pointer casts. Supported kinds: string, bool, []string,
 // uint8–uint64, int, int8–int64, uint and time.Duration.
-func RegisterFlags(cmd *cobra.Command, cfg interface{}) {
+func RegisterFlags(cmd *cobra.Command, cfg any) {
 	RegisterFlagSet(cmd.Flags(), cfg)
 }
 
 // RegisterFlagSet is [RegisterFlags] on a flag set: the root's persistent flags.
-func RegisterFlagSet(fs *pflag.FlagSet, cfg interface{}) {
+func RegisterFlagSet(fs *pflag.FlagSet, cfg any) {
 	v := reflect.ValueOf(cfg).Elem()
 	t := v.Type()
 
@@ -54,11 +54,14 @@ func RegisterFlagSet(fs *pflag.FlagSet, cfg interface{}) {
 		case reflect.String:
 			fs.StringVar(fv.Addr().Interface().(*string), flagName, fv.String(), desc)
 		case reflect.Uint8:
-			fs.Uint8Var(fv.Addr().Interface().(*uint8), flagName, uint8(fv.Uint()), desc)
+			p := fv.Addr().Interface().(*uint8)
+			fs.Uint8Var(p, flagName, *p, desc)
 		case reflect.Uint16:
-			fs.Uint16Var(fv.Addr().Interface().(*uint16), flagName, uint16(fv.Uint()), desc)
+			p := fv.Addr().Interface().(*uint16)
+			fs.Uint16Var(p, flagName, *p, desc)
 		case reflect.Uint32:
-			fs.Uint32Var(fv.Addr().Interface().(*uint32), flagName, uint32(fv.Uint()), desc)
+			p := fv.Addr().Interface().(*uint32)
+			fs.Uint32Var(p, flagName, *p, desc)
 		case reflect.Uint64:
 			fs.Uint64Var(fv.Addr().Interface().(*uint64), flagName, fv.Uint(), desc)
 		case reflect.Uint:
@@ -66,11 +69,14 @@ func RegisterFlagSet(fs *pflag.FlagSet, cfg interface{}) {
 		case reflect.Int:
 			fs.IntVar(fv.Addr().Interface().(*int), flagName, int(fv.Int()), desc)
 		case reflect.Int8:
-			fs.Int8Var(fv.Addr().Interface().(*int8), flagName, int8(fv.Int()), desc)
+			p := fv.Addr().Interface().(*int8)
+			fs.Int8Var(p, flagName, *p, desc)
 		case reflect.Int16:
-			fs.Int16Var(fv.Addr().Interface().(*int16), flagName, int16(fv.Int()), desc)
+			p := fv.Addr().Interface().(*int16)
+			fs.Int16Var(p, flagName, *p, desc)
 		case reflect.Int32:
-			fs.Int32Var(fv.Addr().Interface().(*int32), flagName, int32(fv.Int()), desc)
+			p := fv.Addr().Interface().(*int32)
+			fs.Int32Var(p, flagName, *p, desc)
 		case reflect.Int64:
 			fs.Int64Var(fv.Addr().Interface().(*int64), flagName, fv.Int(), desc)
 		case reflect.Bool:

@@ -13,6 +13,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"unicode"
 
 	"github.com/otfabric/go-ethernetip/cip"
 	"github.com/otfabric/go-ethernetip/eds"
@@ -184,18 +185,26 @@ func parseSpecConnection(s string) (eds.SpecConnection, error) {
 	if len(parts) < 5 {
 		return eds.SpecConnection{}, bad
 	}
-	var n [5]uint64
-	for i := 0; i < 5; i++ {
+	var inst [3]uint32
+	for i := range inst {
 		v, err := strconv.ParseUint(strings.TrimSpace(parts[i]), 0, 32)
 		if err != nil {
 			return eds.SpecConnection{}, bad
 		}
-		n[i] = v
+		inst[i] = uint32(v & 0xFFFFFFFF)
 	}
-	if n[1] == 0 || n[2] == 0 || n[3] > 65535 || n[4] > 65535 {
+	var size [2]int
+	for i := range size {
+		v, err := strconv.ParseUint(strings.TrimSpace(parts[3+i]), 0, 16)
+		if err != nil {
+			return eds.SpecConnection{}, bad
+		}
+		size[i] = int(v & 0xFFFF)
+	}
+	if inst[1] == 0 || inst[2] == 0 {
 		return eds.SpecConnection{}, bad
 	}
-	c := eds.SpecConnection{Config: uint32(n[0]), Output: uint32(n[1]), Input: uint32(n[2]), OutputSize: int(n[3]), InputSize: int(n[4]), Name: "Exclusive Owner"}
+	c := eds.SpecConnection{Config: inst[0], Output: inst[1], Input: inst[2], OutputSize: size[0], InputSize: size[1], Name: "Exclusive Owner"}
 	if len(parts) > 5 && strings.TrimSpace(parts[5]) != "" {
 		d, err := time.ParseDuration(strings.TrimSpace(parts[5]))
 		if err != nil || d <= 0 {
@@ -255,7 +264,34 @@ func CheckEDSGenerate(cfg config.EDSGenerateConfig) (eds.Spec, error) {
 		spec.Connections = append(spec.Connections, sc)
 	}
 	spec.VendorName, spec.Description = cfg.VendorName, cfg.Description
+	// An EDS string is one quoted line: a control character (a newline
+	// above all) would end it and leave a file that does not parse.
+	for _, t := range []struct{ what, s string }{
+		{"--product-name", spec.Identity.ProductName}, {"--vendor-name", spec.VendorName}, {"--description", spec.Description},
+	} {
+		if err := checkText(t.what, t.s); err != nil {
+			return spec, err
+		}
+	}
+	for _, a := range spec.Assemblies {
+		if err := checkText("--assembly name", a.Name); err != nil {
+			return spec, err
+		}
+	}
+	for _, c := range spec.Connections {
+		if err := checkText("--connection name", c.Name); err != nil {
+			return spec, err
+		}
+	}
 	return spec, nil
+}
+
+// checkText refuses a text with control characters for an EDS string.
+func checkText(what, s string) error {
+	if strings.ContainsFunc(s, unicode.IsControl) {
+		return invalid(errs.CodeInvalidValue, "%s %q has a control character: an EDS string is one line", what, s)
+	}
+	return nil
 }
 
 // EDSGenerate runs `eds generate`: an EDS for a device, from its identity (read from the
@@ -274,6 +310,9 @@ func (e Env) EDSGenerate(ctx context.Context, cfg config.EDSGenerateConfig) ([]b
 		s.Close()
 		if err != nil {
 			return nil, WrapError(err)
+		}
+		if strings.ContainsFunc(id.ProductName, unicode.IsControl) {
+			return nil, errs.New(errs.KindProtocol, errs.CodeProtocolViolation, fmt.Sprintf("the device's product name %q has a control character, which an EDS string cannot hold", id.ProductName), nil)
 		}
 		spec.Identity = id
 	}
@@ -294,13 +333,17 @@ func WriteOutput(path, kind string, data []byte, force bool) (*types.FileResult,
 	if force {
 		flags = os.O_WRONLY | os.O_CREATE | os.O_TRUNC
 	}
-	f, err := os.OpenFile(path, flags, 0o644)
+	f, err := os.OpenFile(path, flags, 0o600)
 	if err != nil {
 		if errors.Is(err, os.ErrExist) {
 			return nil, errs.InvalidInput(errs.CodeOutputFileCreateFailed, fmt.Sprintf("%s exists: pass --force to overwrite it", path), err)
 		}
 		return nil, errs.Output(errs.CodeOutputFileCreateFailed, err)
 	}
+	// A file replaced with --force keeps its old mode otherwise. Best
+	// effort: the file is the operator's, who asked to replace it, and
+	// Windows has no such modes.
+	_ = f.Chmod(0o600)
 	if _, err := f.Write(data); err != nil {
 		_ = f.Close()
 		return nil, errs.Output(errs.CodeOutputFileWriteFailed, err)

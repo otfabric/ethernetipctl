@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"sort"
@@ -136,11 +137,24 @@ func DemoLogix() *Logix {
 	}
 }
 
+// MaxModelSize is the largest model file Load reads.
+const MaxModelSize = 16 << 20
+
 // Load reads a model file: YAML, or JSON for a .json file.
 func Load(path string) (*Model, error) {
-	data, err := os.ReadFile(path)
+	f, err := os.Open(path)
 	if err != nil {
 		return nil, err
+	}
+	defer func() { _ = f.Close() }()
+	// A model is a few kilobytes; a larger file (or a device such as
+	// /dev/zero) is refused rather than read into memory.
+	data, err := io.ReadAll(io.LimitReader(f, MaxModelSize+1))
+	if err != nil {
+		return nil, err
+	}
+	if len(data) > MaxModelSize {
+		return nil, fmt.Errorf("%s: model file larger than %d octets", path, MaxModelSize)
 	}
 	m := &Model{}
 	if strings.EqualFold(filepath.Ext(path), ".json") {
@@ -340,7 +354,7 @@ func addTag(ts *logix.TagServer, t Tag) error {
 		return fmt.Errorf("a structure tag has no initial value in the model")
 	case "REAL", "LREAL":
 		var fs []float64
-		for _, p := range strings.Split(t.Value, ",") {
+		for p := range strings.SplitSeq(t.Value, ",") {
 			f, perr := strconv.ParseFloat(strings.TrimSpace(p), 64)
 			if perr != nil {
 				return fmt.Errorf("value %q", p)
@@ -351,7 +365,7 @@ func addTag(ts *logix.TagServer, t Tag) error {
 		v, err = logix.Floats(dt, fs...)
 	default:
 		var is []int64
-		for _, p := range strings.Split(t.Value, ",") {
+		for p := range strings.SplitSeq(t.Value, ",") {
 			n, perr := strconv.ParseInt(strings.TrimSpace(p), 0, 64)
 			if perr != nil {
 				return fmt.Errorf("value %q", p)

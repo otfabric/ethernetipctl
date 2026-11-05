@@ -26,6 +26,13 @@ func CheckIO(cfg config.IOConfig) ([]byte, error) {
 	if _, err := checkIO(cfg.IOConnConfig); err != nil {
 		return nil, err
 	}
+	switch {
+	case cfg.OutputSize > maxScannerSize || cfg.InputSize > maxScannerSize:
+		// The scanner's own limit, checked here so that nothing is sent.
+		return nil, invalid(errs.CodeInvalidValue, "invalid --output-size %d or --input-size %d: at most %d for io", cfg.OutputSize, cfg.InputSize, maxScannerSize)
+	case cfg.Duration < 0:
+		return nil, invalid(errs.CodeInvalidValue, "invalid --duration %v: 0 (until interrupted) or more", cfg.Duration)
+	}
 	out := make([]byte, cfg.OutputSize)
 	if cfg.OutputData != "" {
 		data, err := ParseHex(cfg.OutputData)
@@ -44,6 +51,10 @@ func CheckIO(cfg config.IOConfig) ([]byte, error) {
 	}
 	return out, nil
 }
+
+// maxScannerSize is the largest I/O data size go-ethernetip's scanner
+// accepts.
+const maxScannerSize = 65000
 
 // sampler turns the inputs of an I/O connection into records, from the endpoint's
 // goroutine to the command's.
