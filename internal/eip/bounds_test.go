@@ -122,3 +122,13 @@ func TestWriteOutputWriteFails(t *testing.T) {
 		t.Fatalf("write to /dev/full: %v", err)
 	}
 }
+
+// A bit is refused before connecting when the type has no such bit.
+func TestTagWriteBitWidth(t *testing.T) {
+	for tag, want := range map[string]string{"Count.31": "", "Count.32": errs.CodeInvalidValue} {
+		_, _, _, err := CheckTagWrite(tag, config.TagWriteConfig{Type: "DINT", Value: "1", Yes: true})
+		if codeOf(err) != want {
+			t.Errorf("%s: %v", tag, err)
+		}
+	}
+}
