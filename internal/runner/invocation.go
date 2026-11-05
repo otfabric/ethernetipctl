@@ -16,6 +16,9 @@ type Invocation struct {
 	HasOutputFormat bool
 	SuccessExitCode int
 	SuccessExitSet  bool
+	// Stream is set for a command that writes JSON Lines: its fatal error
+	// is one compact line too.
+	Stream bool
 }
 
 // SetOutputFormat records the resolved stdout format after format.Parse.

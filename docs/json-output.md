@@ -69,5 +69,5 @@ The `detail` of the `diagnose` checks: `tcp-connect` `address`; `register-sessio
 
 ## Streams and stderr
 
-- A streaming command writes **compact** JSON, one object per line; every other command writes **one** indented JSON document.
+- A streaming command writes **compact** JSON, one object per line, and so is its fatal error object after the records; every other command writes **one** indented JSON document.
 - Progress, connection state, summaries and the `--debug` trace go to **stderr**, as text, in every format. stdout holds nothing but the result.

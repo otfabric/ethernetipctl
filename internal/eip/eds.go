@@ -10,9 +10,11 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 	"time"
+	"unicode"
 
 	"github.com/otfabric/go-ethernetip/cip"
 	"github.com/otfabric/go-ethernetip/eds"
@@ -263,7 +265,34 @@ func CheckEDSGenerate(cfg config.EDSGenerateConfig) (eds.Spec, error) {
 		spec.Connections = append(spec.Connections, sc)
 	}
 	spec.VendorName, spec.Description = cfg.VendorName, cfg.Description
+	// An EDS string is one quoted line: a control character (a newline
+	// above all) would end it and leave a file that does not parse.
+	for _, t := range []struct{ what, s string }{
+		{"--product-name", spec.Identity.ProductName}, {"--vendor-name", spec.VendorName}, {"--description", spec.Description},
+	} {
+		if err := checkText(t.what, t.s); err != nil {
+			return spec, err
+		}
+	}
+	for _, a := range spec.Assemblies {
+		if err := checkText("--assembly name", a.Name); err != nil {
+			return spec, err
+		}
+	}
+	for _, c := range spec.Connections {
+		if err := checkText("--connection name", c.Name); err != nil {
+			return spec, err
+		}
+	}
 	return spec, nil
+}
+
+// checkText refuses a text with control characters for an EDS string.
+func checkText(what, s string) error {
+	if strings.ContainsFunc(s, unicode.IsControl) {
+		return invalid(errs.CodeInvalidValue, "%s %q has a control character: an EDS string is one line", what, s)
+	}
+	return nil
 }
 
 // EDSGenerate runs `eds generate`: an EDS for a device, from its identity (read from the
@@ -282,6 +311,9 @@ func (e Env) EDSGenerate(ctx context.Context, cfg config.EDSGenerateConfig) ([]b
 		s.Close()
 		if err != nil {
 			return nil, WrapError(err)
+		}
+		if strings.ContainsFunc(id.ProductName, unicode.IsControl) {
+			return nil, errs.New(errs.KindProtocol, errs.CodeProtocolViolation, fmt.Sprintf("the device's product name %q has a control character, which an EDS string cannot hold", id.ProductName), nil)
 		}
 		spec.Identity = id
 	}
@@ -307,6 +339,11 @@ func WriteOutput(path, kind string, data []byte, force bool) (*types.FileResult,
 		if errors.Is(err, os.ErrExist) {
 			return nil, errs.InvalidInput(errs.CodeOutputFileCreateFailed, fmt.Sprintf("%s exists: pass --force to overwrite it", path), err)
 		}
+		return nil, errs.Output(errs.CodeOutputFileCreateFailed, err)
+	}
+	// A file replaced with --force keeps its old mode otherwise.
+	if err := f.Chmod(0o600); err != nil && runtime.GOOS != "windows" {
+		_ = f.Close()
 		return nil, errs.Output(errs.CodeOutputFileCreateFailed, err)
 	}
 	if _, err := f.Write(data); err != nil {

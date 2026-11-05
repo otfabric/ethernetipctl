@@ -87,6 +87,10 @@ func connectionPath(p config.ConnectionPathConfig, configData []byte) (cip.Path,
 		}
 		path = append(path, cip.DataSegment{Data: configData})
 	}
+	// Forward_Open gives the connection path's size in one octet of words.
+	if _, err := path.Words(); err != nil {
+		return nil, invalid(errs.CodeInvalidValue, "--config-data has %d octets: the connection path, data included, holds at most 255 words", len(configData))
+	}
 	return path, nil
 }
 

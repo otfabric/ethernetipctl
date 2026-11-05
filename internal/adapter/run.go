@@ -24,6 +24,9 @@ import (
 // Resolve returns the model `adapter` serves: the model file of --config, or the defaults,
 // with the identity flags, --assembly, --echo and --logix applied.
 func Resolve(cfg *config.AdapterConfig) (*Model, error) {
+	if cfg.Duration < 0 {
+		return nil, errs.InvalidInput(errs.CodeInvalidValue, fmt.Sprintf("invalid --duration %v: 0 (until interrupted) or more", cfg.Duration), nil)
+	}
 	m := &Model{Identity: DefaultIdentity}
 	if cfg.Config != "" {
 		loaded, err := Load(cfg.Config)

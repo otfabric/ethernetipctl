@@ -1,5 +1,55 @@
 # ethernetipctl Releases
 
+## v0.5.0
+
+**Date:** 2026-11-05
+**Previous release:** v0.4.1
+
+## Summary
+
+Hardening after a SAST review (gosec and opengrep at low/low, 19 findings:
+16 fixed in code, 3 operator-named file paths recorded as false positives in
+sast-triage) and new hostile-device, chaos, signal and fuzz tests, which
+found ten defects. Values that wrapped or were silently changed are now
+refused before anything is sent. Go 1.26 is the minimum.
+
+## Changes
+
+- **Go 1.26** minimum (CI on 1.26 and 1.27); `go fix` applied;
+  go-ethernetip v0.3.4 → v0.4.0; shared CI v3.3.1.
+- **forward-open / io**: `--output-size` above 65529 or `--input-size`
+  above 65533 wrapped the 16-bit connection size of Forward_Open (65530
+  was sent as 0); they are `invalid_value` (exit 3). `io` refuses sizes
+  above 65000, the scanner's limit, before connecting instead of after.
+  `--config-data` too long for the connection path (255 words) is
+  `invalid_value` before connecting; it was a `protocol_violation` (exit
+  6) after.
+- **io / adapter**: a negative `--duration` is `invalid_value`; it ran
+  until interrupted.
+- **tag write**: values are encoded as `write` encodes them. A REAL beyond
+  float32 (e.g. 3.5e38) is refused; it was written as infinity. ULINT and
+  LWORD take their whole unsigned range; values above 2^63-1 were
+  refused. A bit beyond the type's width (`Count.32` of a DINT) is refused
+  before connecting.
+- **eds generate**: a control character (a newline above all) in
+  `--product-name`, `--vendor-name`, `--description` or an assembly or
+  connection name is `invalid_value`; it produced an EDS that did not
+  parse, with exit 0. A device whose product name has one fails with
+  `protocol_violation` (exit 6).
+- **Output files** (`eds generate --output`, codegen) are created 0600, and
+  a file replaced with `--force` is set to 0600 too (it kept its mode).
+- **adapter**: a model file above 16 MiB is refused instead of read whole.
+- **JSON Lines**: the fatal error of a stream (`io`, `adapter`) with
+  `--format json` is one compact line after the records; it was an
+  indented object that broke line-by-line readers.
+- **Tests**: hostile flags (every numeric and duration flag at its bounds,
+  all CIP types), a hostile device fake (about 20 behaviours), a
+  delay/cut proxy, SIGINT/SIGTERM against the binary, hostile EDS and
+  model files, and fuzz targets for value encoding, tag values, EDS specs,
+  checks, host parsing and model loading.
+
+---
+
 ## v0.4.1
 
 **Date:** 2026-10-31
