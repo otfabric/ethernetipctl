@@ -1,5 +1,30 @@
 # ethernetipctl Releases
 
+## v0.5.1
+
+**Date:** 2026-11-05
+**Previous release:** v0.5.0
+
+## Summary
+
+go-ethernetip v0.5.0. `tag write` now builds its values with the library's
+constructors instead of encoding them itself. Exit codes and error codes
+are unchanged.
+
+## Changes
+
+- **go-ethernetip** v0.4.0 → v0.5.0 (REAL range check, `logix.Uints`,
+  control characters refused by `eds.Build`).
+- **tag write**: integer values are built with `logix.Ints` and
+  `logix.Uints` (ULINT and LWORD keep their whole unsigned range), and REAL
+  and LREAL values with `logix.Floats`, which checks the REAL range. A value
+  out of range is still `invalid_value` (exit 3), and its message now names
+  the type: `invalid value: 300 does not fit SINT` and `invalid value:
+  3.5e+38 does not fit REAL`. Error messages lose the library's
+  `logix: wrong type:` prefix.
+
+---
+
 ## v0.5.0
 
 **Date:** 2026-11-05

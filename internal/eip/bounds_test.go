@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"testing"
 	"time"
 
@@ -138,5 +139,42 @@ func TestTagWriteBitWidth(t *testing.T) {
 func TestTemplateOfHandleProgramWithoutTag(t *testing.T) {
 	if _, err := templateOfHandle(context.Background(), nil, "Program:Main"); codeOf(err) != errs.CodeInvalidPath {
 		t.Fatalf("Program:Main: %v", err)
+	}
+}
+
+// Tag values go through the library constructors: each type's whole range
+// is accepted, and a value outside it is refused with the value named.
+func TestTagValueRanges(t *testing.T) {
+	for _, tc := range []struct {
+		typ, value string
+		want       any
+	}{
+		{"ULINT", "18446744073709551615", uint64(math.MaxUint64)},
+		{"LWORD", "0x8000000000000000", uint64(1 << 63)},
+		{"LINT", "-9223372036854775808", int64(math.MinInt64)},
+		{"SINT", "-128", int64(-128)},
+		{"USINT", "255", uint64(255)},
+		{"REAL", "3.4e38", 3.4e38},
+		{"REAL", "-inf", "-Inf"},
+		{"LREAL", "1e300", 1e300},
+	} {
+		v, vals, err := tagValue(tc.typ, tc.value)
+		if err != nil || len(vals) != 1 || vals[0] != tc.want || v.Count != 1 {
+			t.Errorf("%s %s: %v %v", tc.typ, tc.value, vals, err)
+		}
+	}
+	for _, tc := range []struct{ typ, value, msg string }{
+		{"REAL", "3.5e38", "invalid value: 3.5e+38 does not fit REAL"},
+		{"SINT", "300", "invalid value: 300 does not fit SINT"},
+		{"USINT", "256", "invalid value: 256 does not fit USINT"},
+		{"UDINT", "-1", `invalid UDINT value "-1"`},
+		{"LINT", "x", `invalid LINT value "x"`},
+		{"LREAL", "1e999", `invalid LREAL value "1e999"`},
+		{"STRING", string(make([]byte, 90)), "invalid STRING value: STRING of 90 characters"},
+	} {
+		_, _, err := tagValue(tc.typ, tc.value)
+		if codeOf(err) != errs.CodeInvalidValue || !strings.HasPrefix(err.Error(), tc.msg) {
+			t.Errorf("%s %q: %v", tc.typ, tc.value, err)
+		}
 	}
 }

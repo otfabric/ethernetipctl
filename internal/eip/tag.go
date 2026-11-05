@@ -206,7 +206,7 @@ func tagValue(typ, value string) (logix.Value, []any, error) {
 	if name == "STRING" {
 		v, err := logix.Strings(value)
 		if err != nil {
-			return logix.Value{}, nil, invalid(errs.CodeInvalidValue, "invalid STRING value: %v", trimPrefix(err.Error()))
+			return logix.Value{}, nil, invalid(errs.CodeInvalidValue, "invalid STRING value: %s", valueErrText(err))
 		}
 		return v, []any{value}, nil
 	}
@@ -235,25 +235,70 @@ func tagValue(typ, value string) (logix.Value, []any, error) {
 		v, err := logix.Ints(t, is...)
 		return v, vals, wrapValueErr(err)
 	}
-	// Every other type is encoded as `write` encodes it: in the type's own
-	// range (a REAL beyond float32 is refused, not stored as infinity; ULINT
-	// and LWORD take their whole unsigned range).
-	var data []byte
+	// The other types go through the library's constructors: Ints for the
+	// signed types, Uints for the unsigned ones (ULINT and LWORD take their
+	// whole range), Floats for REAL and LREAL (a REAL beyond float32 is
+	// refused, not stored as infinity). The text is parsed in 64 bits; the
+	// library checks the type's range.
+	var (
+		v    logix.Value
+		ints []int64
+		uns  []uint64
+		fls  []float64
+	)
 	for _, p := range parts {
-		if data, err = encodeOne(data, t, strings.TrimSpace(p)); err != nil {
-			return logix.Value{}, nil, err
+		p = strings.TrimSpace(p)
+		bad := func(err error) error {
+			return invalid(errs.CodeInvalidValue, "invalid %s value %q: %v", t, p, err)
+		}
+		switch {
+		case t == cip.TypeREAL || t == cip.TypeLREAL:
+			f, err := strconv.ParseFloat(p, 64)
+			if err != nil {
+				return logix.Value{}, nil, bad(err)
+			}
+			fls = append(fls, f)
+		case t.IsSigned():
+			n, err := strconv.ParseInt(p, 0, 64)
+			if err != nil {
+				return logix.Value{}, nil, bad(err)
+			}
+			ints = append(ints, n)
+		default:
+			n, err := strconv.ParseUint(p, 0, 64)
+			if err != nil {
+				return logix.Value{}, nil, bad(err)
+			}
+			uns = append(uns, n)
 		}
 	}
-	r := cip.NewReader(data)
+	switch {
+	case fls != nil:
+		v, err = logix.Floats(t, fls...)
+	case ints != nil:
+		v, err = logix.Ints(t, ints...)
+	default:
+		v, err = logix.Uints(t, uns...)
+	}
+	if err != nil {
+		return logix.Value{}, nil, wrapValueErr(err)
+	}
+	r := cip.NewReader(v.Data)
 	for range parts {
 		vals = append(vals, decodeOne(t, r))
 	}
-	return logix.Value{Type: t, Count: len(parts), Data: data}, vals, nil
+	return v, vals, nil
+}
+
+// valueErrText is the text of a value error of the library without its
+// sentinel prefix, which says nothing to a user: "300 does not fit SINT" does.
+func valueErrText(err error) string {
+	return strings.TrimPrefix(trimPrefix(err.Error()), logix.ErrType.Error()+": ")
 }
 
 func wrapValueErr(err error) error {
 	if err != nil {
-		return invalid(errs.CodeInvalidValue, "invalid value: %v", trimPrefix(err.Error()))
+		return invalid(errs.CodeInvalidValue, "invalid value: %s", valueErrText(err))
 	}
 	return nil
 }
