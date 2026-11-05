@@ -7,6 +7,7 @@ import (
 	"crypto/rand"
 	"encoding/binary"
 	"fmt"
+	"math"
 	"strings"
 	"time"
 
@@ -105,12 +106,28 @@ func checkIO(c config.IOConnConfig) ([]byte, error) {
 		return nil, invalid(errs.CodeInvalidValue, "invalid --rpi %v", c.RPI)
 	case c.TimeoutMultiplier > 7:
 		return nil, invalid(errs.CodeInvalidValue, "invalid --timeout-multiplier %d: 0 to 7", c.TimeoutMultiplier)
+	case int(c.OutputSize) > maxOutputSize:
+		// The connection size carries the data and its header in 16 bits.
+		return nil, invalid(errs.CodeInvalidValue, "invalid --output-size %d: at most %d", c.OutputSize, maxOutputSize)
+	case int(c.InputSize) > maxInputSize:
+		return nil, invalid(errs.CodeInvalidValue, "invalid --input-size %d: at most %d", c.InputSize, maxInputSize)
 	}
 	if _, err := connectionPath(c.ConnectionPathConfig, data); err != nil {
 		return nil, err
 	}
 	return data, nil
 }
+
+// The largest I/O data sizes whose connection size (data, sequence count and,
+// O->T, the run/idle header) fits Forward_Open's 16 bits.
+var (
+	maxOutputSize = 0xFFFF - implicit.FormatHeader32.Overhead(1)
+	maxInputSize  = 0xFFFF - implicit.FormatModeless.Overhead(1)
+)
+
+// size16 is a connection size checkIO has bounded; the clamp only stops it
+// from ever wrapping.
+func size16(n int) uint16 { return uint16(max(min(n, 0xFFFF), 0)) }
 
 // randomUint32 returns a random number for connection serials.
 func randomUint32() uint32 {
@@ -123,7 +140,7 @@ func randomUint32() uint32 {
 func triad(t config.TriadConfig) cip.Triad {
 	out := cip.Triad{Serial: t.ConnectionSerial, VendorID: t.OriginatorVendor, OriginatorSerial: t.OriginatorSerial}
 	if out.Serial == 0 {
-		out.Serial = uint16(randomUint32()) | 1
+		out.Serial = uint16(randomUint32()&0xFFFF) | 1
 	}
 	if out.VendorID == 0 {
 		out.VendorID = client.DefaultVendorID
@@ -168,16 +185,18 @@ func (e Env) ForwardOpen(ctx context.Context, host string, cfg config.ForwardOpe
 	if cfg.OutputSize == 0 {
 		otFmt = implicit.FormatHeartbeat
 	}
-	otSize := uint16(otFmt.Overhead(1))
+	ot := otFmt.Overhead(1)
 	if otFmt == implicit.FormatHeader32 {
-		otSize += cfg.OutputSize
+		ot += int(cfg.OutputSize)
 	}
-	toSize := cfg.InputSize + uint16(implicit.FormatModeless.Overhead(1))
+	otSize := size16(ot)
+	toSize := size16(int(cfg.InputSize) + implicit.FormatModeless.Overhead(1))
 	toType := cip.ConnectionPointToPoint
 	if cfg.Multicast {
 		toType = cip.ConnectionMulticast
 	}
-	rpi := uint32(cfg.RPI / time.Microsecond)
+	// checkIO keeps the RPI in 1 µs .. 2^32-1 µs.
+	rpi := uint32(max(min(int64(cfg.RPI/time.Microsecond), math.MaxUint32), 0))
 	fo := cip.ForwardOpen{
 		Large:             cfg.Large || otSize > 0x1FF || toSize > 0x1FF,
 		TOConnID:          client.NewConnectionID(),

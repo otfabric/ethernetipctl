@@ -160,7 +160,7 @@ func (e Env) Diagnose(ctx context.Context, host string) (*types.DiagnoseResult, 
 
 // ipText renders an IP address the TCP/IP Interface object carries as a UDINT.
 func ipText(v uint32) string {
-	return fmt.Sprintf("%d.%d.%d.%d", byte(v>>24), byte(v>>16), byte(v>>8), byte(v))
+	return fmt.Sprintf("%d.%d.%d.%d", byte(v>>24), byte(v>>16&0xFF), byte(v>>8&0xFF), byte(v&0xFF))
 }
 
 // tcpipDetail reads the TCP/IP Interface object (0xF5): status, interface configuration,
