@@ -1,5 +1,28 @@
 # ethernetipctl Releases
 
+## v0.5.2
+
+**Date:** 2026-11-07
+**Previous release:** v0.5.1
+
+## Summary
+
+go-ethernetip v0.5.2. `io` and `forward-open` without `--config` now name
+configuration instance 0 in the Class 1 connection path, as every other
+originator does. Exit codes, error codes and output are unchanged.
+
+## Changes
+
+- **go-ethernetip** v0.5.0 → v0.5.2: the scanner's Class 1 path is
+  `20 04 24 <config> 2C <O->T> 2C <T->O>`, also with `--config 0` (before,
+  instance 0 left the segment out), which cB-Sigma's enip and other targets
+  that require the configuration path accept. The library's interop suite
+  now covers thirteen independent stacks (ethernetip-interop v0.8.1).
+- **io**, **forward-open**: `--config` is described as "0 = none; sent as
+  instance 0 in the path".
+
+---
+
 ## v0.5.1
 
 **Date:** 2026-11-05
