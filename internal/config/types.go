@@ -76,7 +76,7 @@ type SessionConfig struct {
 
 // ConnectionPathConfig names the assemblies of an I/O connection.
 type ConnectionPathConfig struct {
-	Config uint32 `desc:"Configuration assembly instance (0 = none in the path)" flag:"config"`
+	Config uint32 `desc:"Configuration assembly instance (0 = none; sent as instance 0 in the path)" flag:"config"`
 	Output uint32 `desc:"O->T connection point: the output assembly (or a heartbeat point for input-only and listen-only connections)" flag:"output"`
 	Input  uint32 `desc:"T->O connection point: the input assembly" flag:"input"`
 }
