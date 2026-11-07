@@ -10,15 +10,29 @@
 
 It is built for commissioning, troubleshooting a device or a network path, checking what a device says about itself, and hardware-free test setups. Output can be plain text, a table or JSON with stable exit codes, so it works in scripts and CI. It is written in Go on top of [go-ethernetip](https://github.com/otfabric/go-ethernetip).
 
-**Quick links:** [Quick start](#quick-start) · [Features](#features) · [Installation](#installation) · [EtherNet/IP in two minutes](#ethernetip-in-two-minutes) · [Commands](#commands) · [Adapter simulator](#simulate-an-adapter) · [Safety](#safety) · [JSON and exit codes](#json-output-and-exit-codes)
+**Quick links:** [Install](#install) · [Quick start](#quick-start) · [Features](#features) · [EtherNet/IP in two minutes](#ethernetip-in-two-minutes) · [Commands](#commands) · [Adapter simulator](#simulate-an-adapter) · [Safety](#safety) · [JSON and exit codes](#json-output-and-exit-codes)
 
 > **Responsible use:** ethernetipctl sends real CIP requests. Only use it on devices and networks you own or are authorized to test. `write`, `reset`, `assembly write`, `tag write` and `io` with output data change a device, and need `--yes` (see [Safety](#safety) and [SECURITY.md](SECURITY.md)): know what an attribute, an assembly or a tag does before you write it. ethernetipctl never scans address ranges.
+
+## Install
+
+```bash
+curl -fsSL https://get.otfabric.io/ethernetipctl | sh
+```
+
+```powershell
+irm https://get.otfabric.io/ethernetipctl.ps1 | iex
+```
+
+Linux (amd64, arm64, armv7), macOS (Intel, Apple silicon) and Windows (amd64, arm64). The installer verifies the release's SHA-256 checksum, installs per user without `sudo` (`~/.local/bin`, Windows `%LOCALAPPDATA%\OTFabric\bin`), and upgrades in place when run again. Pin a version with `OTF_VERSION=x.y.z`; for CI, containers and device images use `OTF_UNMANAGED_INSTALL=<dir>`; all options: [otfabric/install](https://github.com/otfabric/install#options). For offline machines, the archives and checksums are on [Releases](https://github.com/otfabric/ethernetipctl/releases).
+
+From source (Go 1.26+): `go install github.com/otfabric/ethernetipctl@latest`
 
 ---
 
 ## Quick start
 
-Download a binary from [GitHub Releases](https://github.com/otfabric/ethernetipctl/releases) (see [Installation](#installation)). No device at hand? Start the simulated adapter in one terminal:
+[Install](#install) ethernetipctl. No device at hand? Start the simulated adapter in one terminal:
 
 ```console
 ethernetipctl adapter --listen 127.0.0.1 --echo --logix
@@ -96,150 +110,6 @@ Every command of this README, run for real with its output, is in
 | EDS | Inspect, validate (exit code for CI), generate from a device or from flags, and generate Go code (identity, parameters, assembly structs, scanner configurations). |
 | Adapter simulator | A simulated adapter from flags or a YAML/JSON model: identity, assemblies, echo, Logix tags; every connection, write and request streamed as an event. |
 | Script-friendly | `--format text\|json\|table`, a single JSON error object on failure (with the CIP status), stable exit codes, `ETHERNETIPCTL_*` environment variables. |
-
----
-
-## Installation
-
-The easiest way to install ethernetipctl is to download a pre-built binary from the [GitHub Releases page](https://github.com/otfabric/ethernetipctl/releases). No Go toolchain is required.
-
-| Platform | CPU | Download |
-|---|---|---|
-| Linux | x86-64 | `ethernetipctl-<version>-linux-amd64.tar.gz` |
-| Linux | 64-bit ARM (Raspberry Pi 4/5 with a 64-bit OS, AWS Graviton) | `ethernetipctl-<version>-linux-arm64.tar.gz` |
-| Linux | 32-bit ARM, ARMv7 (Raspberry Pi 2 and later with a 32-bit OS) | `ethernetipctl-<version>-linux-armv7.tar.gz` |
-| macOS | Apple Silicon (M1 and later) | `ethernetipctl-<version>-darwin-arm64.tar.gz` |
-| macOS | Intel | `ethernetipctl-<version>-darwin-amd64.tar.gz` |
-| Windows | x86-64 | `ethernetipctl-<version>-windows-amd64.zip` |
-| Windows | ARM64 | `ethernetipctl-<version>-windows-arm64.zip` |
-
-Each release also contains `ethernetipctl-<version>-checksums.txt` (SHA-256) so you can verify your download. The commands below fetch the **latest** release, verify its checksum and install it. Afterwards, check that it works:
-
-```console
-ethernetipctl version
-```
-
-### Linux
-
-```bash
-# 1. Find the latest version and your CPU architecture
-VERSION=$(curl -fsSLI -o /dev/null -w '%{url_effective}' https://github.com/otfabric/ethernetipctl/releases/latest | sed 's|.*/v||')
-case "$(uname -m)" in
-  x86_64)         ARCH=amd64 ;;
-  aarch64|arm64)  ARCH=arm64 ;;
-  armv7l)         ARCH=armv7 ;;
-  *) echo "Unsupported architecture: $(uname -m)" >&2; exit 1 ;;
-esac
-
-# 2. Download the archive and the checksum file
-FILE="ethernetipctl-${VERSION}-linux-${ARCH}.tar.gz"
-BASE="https://github.com/otfabric/ethernetipctl/releases/download/v${VERSION}"
-curl -fsSLO "${BASE}/${FILE}"
-curl -fsSLO "${BASE}/ethernetipctl-${VERSION}-checksums.txt"
-
-# 3. Verify the download (should print "OK")
-grep "${FILE}" "ethernetipctl-${VERSION}-checksums.txt" | sha256sum -c -
-
-# 4. Extract and install (the binary in the archive carries the version and platform in its name)
-rm -rf ethernetipctl-dl && mkdir -p ethernetipctl-dl && tar -xzf "${FILE}" -C ethernetipctl-dl
-sudo install -m 0755 "ethernetipctl-dl/ethernetipctl-${VERSION}-linux-${ARCH}" /usr/local/bin/ethernetipctl
-```
-
-No `sudo`? Install into your home directory instead (and make sure `~/.local/bin` is in your `PATH`):
-
-```bash
-mkdir -p ~/.local/bin
-install -m 0755 "ethernetipctl-dl/ethernetipctl-${VERSION}-linux-${ARCH}" ~/.local/bin/ethernetipctl
-```
-
-
-### macOS
-
-```bash
-# 1. Find the latest version and your CPU architecture (arm64 = Apple Silicon, x86_64 = Intel)
-VERSION=$(curl -fsSLI -o /dev/null -w '%{url_effective}' https://github.com/otfabric/ethernetipctl/releases/latest | sed 's|.*/v||')
-case "$(uname -m)" in
-  arm64)   ARCH=arm64 ;;
-  x86_64)  ARCH=amd64 ;;
-  *) echo "Unsupported architecture: $(uname -m)" >&2; exit 1 ;;
-esac
-
-# 2. Download the archive and the checksum file
-FILE="ethernetipctl-${VERSION}-darwin-${ARCH}.tar.gz"
-BASE="https://github.com/otfabric/ethernetipctl/releases/download/v${VERSION}"
-curl -fsSLO "${BASE}/${FILE}"
-curl -fsSLO "${BASE}/ethernetipctl-${VERSION}-checksums.txt"
-
-# 3. Verify the download (should print "OK")
-grep "${FILE}" "ethernetipctl-${VERSION}-checksums.txt" | shasum -a 256 -c -
-
-# 4. Extract and install (the binary in the archive carries the version and platform in its name)
-rm -rf ethernetipctl-dl && mkdir -p ethernetipctl-dl && tar -xzf "${FILE}" -C ethernetipctl-dl
-sudo install -m 0755 "ethernetipctl-dl/ethernetipctl-${VERSION}-darwin-${ARCH}" /usr/local/bin/ethernetipctl
-```
-
-If you downloaded the archive with a web browser instead of `curl` and macOS refuses to run the binary ("cannot be verified"), remove the quarantine flag: `xattr -d com.apple.quarantine /usr/local/bin/ethernetipctl`.
-
-### Windows (PowerShell)
-
-```powershell
-# 1. Find the latest version and your CPU architecture
-$version = (Invoke-RestMethod https://api.github.com/repos/otfabric/ethernetipctl/releases/latest).tag_name.TrimStart('v')
-$arch    = if ($env:PROCESSOR_ARCHITECTURE -eq 'ARM64') { 'arm64' } else { 'amd64' }
-
-# 2. Download the archive and the checksum file
-$file = "ethernetipctl-$version-windows-$arch.zip"
-$base = "https://github.com/otfabric/ethernetipctl/releases/download/v$version"
-Invoke-WebRequest "$base/$file" -OutFile "$env:TEMP\$file"
-Invoke-WebRequest "$base/ethernetipctl-$version-checksums.txt" -OutFile "$env:TEMP\ethernetipctl-checksums.txt"
-
-# 3. Verify the download (throws an error on mismatch)
-$expected = ((Select-String -Path "$env:TEMP\ethernetipctl-checksums.txt" -Pattern $file).Line -split '\s+')[0]
-$actual   = (Get-FileHash "$env:TEMP\$file" -Algorithm SHA256).Hash
-if ($expected -ne $actual) { throw "Checksum mismatch for $file" }
-
-# 4. Extract to a per-user folder and name the program ethernetipctl.exe
-#    (the .exe in the archive carries the version and platform in its name)
-$dir = "$env:LOCALAPPDATA\Programs\ethernetipctl"
-New-Item -ItemType Directory -Force -Path $dir | Out-Null
-Remove-Item -Recurse -Force "$env:TEMP\ethernetipctl-dl" -ErrorAction SilentlyContinue
-Expand-Archive "$env:TEMP\$file" -DestinationPath "$env:TEMP\ethernetipctl-dl" -Force
-Copy-Item "$env:TEMP\ethernetipctl-dl\ethernetipctl-$version-windows-$arch.exe" "$dir\ethernetipctl.exe" -Force
-
-# 5. Add ethernetipctl to your user PATH (then open a new terminal)
-$userPath = [Environment]::GetEnvironmentVariable('Path', 'User')
-if ($userPath -notlike "*$dir*") {
-  [Environment]::SetEnvironmentVariable('Path', "$userPath;$dir", 'User')
-}
-```
-
-If Windows SmartScreen warns about an unrecognised app, choose **More info → Run anyway**.
-
-### Manual download
-
-1. Open the [latest release](https://github.com/otfabric/ethernetipctl/releases/latest).
-2. Download the archive for your platform from the table above.
-3. Extract it, rename the binary to `ethernetipctl` (`ethernetipctl.exe` on Windows) and move it to a folder on your `PATH`.
-
-### Update
-
-Run the same commands again. They always fetch the latest release, unpack it into an emptied `ethernetipctl-dl` folder and overwrite the previous binary.
-
-### Build from source
-
-Requires Go 1.26 or later.
-
-```console
-git clone https://github.com/otfabric/ethernetipctl.git
-cd ethernetipctl
-make build
-```
-
-`make build` runs `make check` first, which needs `staticcheck`, `golangci-lint` and `govulncheck` on your `PATH`, and writes the binary to **`bin/ethernetipctl`** (see [Development](#development)). Without those tools, `go build -o bin/ethernetipctl .` builds it alone. With a Go toolchain you can also install straight from the module (`ethernetipctl version` then reports the version the go toolchain records: the module version with `go install`, such as `v0.1.0`, and with a plain `go build` in a clone the version it derives from the git tags, such as `v0.1.0+dirty`, with the commit; `dev` when none is recorded, as in a copy without git):
-
-```console
-go install github.com/otfabric/ethernetipctl@latest
-```
 
 ---
 

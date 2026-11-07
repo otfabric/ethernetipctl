@@ -68,4 +68,4 @@ Requests are never repeated: after a timeout (exit 5) a write may or may not hav
 
 ### Verifying Downloads
 
-Release archives are published with SHA-256 checksums. Verify them as shown in the [installation instructions](README.md#installation) before installing.
+Release archives are published with SHA-256 checksums. The installer in the [Install section](README.md#install) verifies the checksum before it installs anything.
