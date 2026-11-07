@@ -55,6 +55,7 @@ Used by `identify`, `status` and `discover`.
 | `eds inspect` | `file`, `device` (`vendor_id`, `vendor_name`, `device_type`, `type_name`, `product_code`, `revision`, `product_name`, `catalog`), `sections`, `params` (`number`, `name`, `type`, `size`, `units`, `min`, `max`, `default`, `path`, `enum_values`), `assemblies` (`number`, `name`, `instance`, `size`, `members`), `connections` (`number`, `name`, `class`, `ot_rpi`, `to_rpi`, `ot_size`, `to_size`, `path`), `errors`, `warnings` |
 | `eds validate` | `file`, `valid`, `errors`, `warnings`, `issues`: `severity` (`"error"`, `"warning"`), `line`, `section`, `message` |
 | `eds generate`, `eds codegen` with `--output` | `kind` (`"eds"`, `"go"`), `output`, `bytes`, `sha256`. Without `--output` the EDS text or Go source itself goes to stdout, whatever `--format` says |
+| `version` (`--json` or `--format json`) | `name`, `version` (no `v`; `"dev"` for a development build), `tag` (`""` without one), `commit` (`"unknown"` when not known), `built` (RFC 3339, or `"unknown"`), `libraries` (the OT Fabric libraries of the build: `name`, `version`), `go`, `platform` (`"linux/amd64"`), in that order |
 
 A `connection` object has `class`, `ot_connection_id`, `to_connection_id`, `connection_serial`, `originator_vendor`, `originator_serial` (the triad forward-close needs), `ot_rpi_ms`, `to_rpi_ms`, `path`.
 

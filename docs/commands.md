@@ -360,7 +360,21 @@ Usage: `ethernetipctl tag write <host[:port]> <tag> --type T --value V[,V...] --
 
 Usage: `ethernetipctl version [flags]`
 
-No flags of its own.
+| Flag | Short | Meaning |
+|---|---|---|
+| `--json` |  | Print the version as one JSON object |
+
+One line on stdout; `--json`, or `--format json`, prints it as JSON:
+
+```text
+ethernetipctl 0.6.0 (tag v0.6.0, commit 1802d0f9afe8642d1e278120b76fcdfac967cb9e, built 2026-11-05T15:41:49Z, go-ethernetip 0.5.2, go1.26.10, linux/amd64)
+{"name":"ethernetipctl","version":"0.6.0","tag":"v0.6.0","commit":"1802d0f9afe8642d1e278120b76fcdfac967cb9e","built":"2026-11-05T15:41:49Z","libraries":[{"name":"go-ethernetip","version":"0.5.2"}],"go":"go1.26.10","platform":"linux/amd64"}
+```
+
+The OT Fabric libraries the binary is built with follow the build date. A build without a
+tag leaves out `tag …, ` (and has `"tag": ""`); a development build (`go build`, `go run`,
+`make build` off a tag) is version `dev`, with the commit Go embeds (`-dirty` for a
+modified tree) and build date `unknown`.
 
 ## `ethernetipctl write`
 

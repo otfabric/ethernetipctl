@@ -30,6 +30,8 @@ From source (Go 1.26+): `go install github.com/otfabric/ethernetipctl@latest`
 
 ### Shell completion
 
+Commands, flags, the values of `--format` and `--type`, and the EDS and model files of the flags and arguments that take one complete.
+
 ```bash
 # bash (needs the bash-completion package)
 mkdir -p ~/.local/share/bash-completion/completions
@@ -186,7 +188,7 @@ Results go to stdout; progress, connection state, summaries and the debug trace 
 | `tag read\|write\|list\|types\|decode …` | Rockwell Logix tags (vendor specific) | write: **yes** |
 | `eds inspect\|validate\|generate\|codegen …` | Electronic Data Sheets | no |
 | `adapter [--config model.yaml]` (alias `server`) | Simulated adapter | — |
-| `version`, `completion bash\|zsh\|fish\|powershell` | | |
+| `version [--json]`, `completion bash\|zsh\|fish\|powershell` | The version on one line (or JSON); shell completion | |
 
 `--route 1/0` (Unconnected_Send through a backplane; `1/0,2/192.168.1.10` for several hops) works with every explicit command; `--connected` (a Class 3 connection) with `identify`, `read`, `write`, `objects`, `object`, `connections`, `assembly` and `tag`.
 
