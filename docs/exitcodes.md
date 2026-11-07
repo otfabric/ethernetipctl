@@ -11,6 +11,7 @@
 | 4 | Transport (`KindTransport`): the TCP connection cannot be made (refused, unreachable), is lost, or the adapter or the I/O endpoint cannot listen |
 | 5 | Timeout (`KindTimeout`): the target did not answer RegisterSession or a request in `--timeout`, or an I/O connection's input stopped arriving |
 | 6 | Refused or protocol error (`KindRefused`, `KindProtocol`): the target answered with a CIP general status other than success (the JSON error carries `cip_status` and `extended_status`), refused a Forward_Open, or violated the protocol |
+| 7 | Partial (`ExitPartial`): reserved with its organisation meaning, a valid result was written and some items failed; no command returns it at present |
 | 8 | Unsupported (`KindUnsupported`): the target does not support the command or service: code `unsupported` |
 | 10 | Output / internal (`KindOutput`, `KindInternal`): the result could not be written, or something unexpected happened |
 | 130 | Interrupted (`KindInterrupted`): Ctrl-C or SIGTERM before a one-shot command had its result |
@@ -19,8 +20,8 @@
 
 | `kind` | `code` values |
 |--------|---------------|
-| `usage` | always `invalid_input` |
-| `invalid_input` | `invalid_input`, `invalid_format`, `invalid_address`, `invalid_path`, `invalid_value`, `invalid_flag_combination`, `invalid_config`, `confirmation_required` (a change without `--yes`), `invalid_eds`, `input_file_open_failed`, `output_file_create_failed` (an `--output` file exists without `--force`) |
+| `usage` | `invalid_input`, or `confirmation_required` (a change without `--yes`) |
+| `invalid_input` | `invalid_input`, `invalid_format`, `invalid_address`, `invalid_path`, `invalid_value`, `invalid_flag_combination`, `invalid_config`, `invalid_eds`, `input_file_open_failed`, `output_file_create_failed` (an `--output` file exists without `--force`) |
 | `transport` | `transport_connect_failed`, `connection_lost`, `listen_failed` |
 | `timeout` | `request_timeout` |
 | `refused` | by CIP general status: `connection_failure` (0x01, a Forward_Open or Forward_Close refused by the Connection Manager; `extended_status` holds its extended status such as 0x0107 connection not found or 0x0106 ownership conflict), `resource_unavailable` (0x02), `path_segment_error` (0x04), `path_destination_unknown` (0x05, also an unknown Logix tag), `service_not_supported` (0x08), `invalid_attribute_value` (0x09), `state_conflict` (0x0C, 0x10), `attribute_not_settable` (0x0E), `privilege_violation` (0x0F), `not_enough_data` (0x13), `attribute_not_supported` (0x14), `too_much_data` (0x15), `cip_error` (any other status) |
@@ -40,6 +41,6 @@
 
 **`--debug`:** adds go-ethernetip's protocol log and, after a fatal error, the chain of causes (`cause: …` lines) on stderr. It does not change stdout or the exit code.
 
-**Organisation table:** these codes follow the OT Fabric CLI exit-code table. ethernetipctl does not use `7` and `9`: they keep their organisation meaning and are not reused for anything else.
+**Organisation table:** these codes follow the OT Fabric CLI exit-code table. ethernetipctl returns neither `7` (partial) nor `9` (permission), and has no protocol-specific codes (11–12, 14–63) and no `13` (safety): a change without `--yes` is a usage error, `2`, as the organisation table has it. Unused codes keep their organisation meaning and are not reused for anything else.
 
 **Format variable:** `ETHERNETIPCTL_FORMAT` is the name to use; `ETHERNETIPCTL_OUTPUT_FORMAT` stays accepted. When both are set, `ETHERNETIPCTL_FORMAT` wins.

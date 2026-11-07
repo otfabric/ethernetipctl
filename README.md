@@ -300,6 +300,8 @@ Results go to stdout; progress, connection state, summaries and the debug trace 
 
 `--route 1/0` (Unconnected_Send through a backplane; `1/0,2/192.168.1.10` for several hops) works with every explicit command; `--connected` (a Class 3 connection) with `identify`, `read`, `write`, `objects`, `object`, `connections`, `assembly` and `tag`.
 
+Every command's own flags, with their types and defaults, are in [docs/commands.md](docs/commands.md).
+
 `attribute` is an alias of `read`: reading one attribute is what `read` does, and `read --all` reads them all.
 
 ### Discover and identify

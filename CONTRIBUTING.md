@@ -91,6 +91,7 @@ When you change commands, flags, output or exit codes, update:
 
 - The command's `Short` / `Long` / `Example` help text
 - [README.md](README.md), including the environment variable table for new flags
+- [docs/commands.md](docs/commands.md), the flag reference of every command (from `--help`; `make docs-check` fails on an undocumented flag)
 - [docs/json-output.md](docs/json-output.md) and [docs/exitcodes.md](docs/exitcodes.md) — `--format json` and exit codes are a stable contract for scripts
 - [docs/adapter-config.md](docs/adapter-config.md) and [testdata/adapter.yaml](testdata/adapter.yaml) when the adapter model changes
 - [RELEASE.md](RELEASE.md), calling out anything that breaks existing usage: a `## vX.Y.Z` section at the top, with `**Date:**` and `**Previous release:**` lines, ending with a `---` line. The release workflow publishes the text from `## <tag>` to the next `---` as the release notes, so there is never an Unreleased section
