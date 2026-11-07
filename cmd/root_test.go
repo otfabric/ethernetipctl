@@ -3,7 +3,7 @@
 package cmd
 
 import (
-	"runtime/debug"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -14,13 +14,33 @@ import (
 )
 
 func TestVersionHelpAndUsage(t *testing.T) {
-	SetBuildMeta("1.2.3", "v1.2.3", "abc1234", "2026-01-31T12:00:00Z")
-	t.Cleanup(func() { SetBuildMeta("dev", "", "", "") })
-	run(t, "version").want(t, 0).has(t, "ethernetipctl version: 1.2.3", "tag:         v1.2.3", "commit:      abc1234", "build date:  2026-01-31T12:00:00Z", "go version:", "platform:")
-	SetBuildMeta(" ", "", "", "")
-	r := run(t, "version").want(t, 0).has(t, "ethernetipctl version: (unknown)")
-	if strings.Contains(r.stdout, "commit:") {
-		t.Errorf("empty build metadata is printed:\n%s", r.stdout)
+	const sha = "1802d0f9afe8642d1e278120b76fcdfac967cb9e"
+	SetBuildMeta("1.2.3", "v1.2.3", sha, "2026-01-31T12:00:00Z")
+	t.Cleanup(func() { SetBuildMeta("", "", "", "") })
+	tail := runtime.Version() + ", " + runtime.GOOS + "/" + runtime.GOARCH
+	text := "ethernetipctl 1.2.3 (tag v1.2.3, commit " + sha + ", built 2026-01-31T12:00:00Z, " + tail + ")\n"
+	json := `{"name":"ethernetipctl","version":"1.2.3","tag":"v1.2.3","commit":"` + sha + `","built":"2026-01-31T12:00:00Z","go":"` +
+		runtime.Version() + `","platform":"` + runtime.GOOS + "/" + runtime.GOARCH + "\"}\n"
+	if r := run(t, "version").want(t, 0); r.stdout != text {
+		t.Errorf("version:\n got %q\nwant %q", r.stdout, text)
+	}
+	for _, args := range [][]string{{"version", "--json"}, {"version", "--format", "json"}, {"version", "--format", "table", "--json"}} {
+		if r := run(t, args...).want(t, 0); r.stdout != json {
+			t.Errorf("%v:\n got %q\nwant %q", args, r.stdout, json)
+		}
+	}
+	if r := run(t, "version", "--format", "table").want(t, 0); r.stdout != text {
+		t.Errorf("version --format table:\n got %q\nwant %q", r.stdout, text)
+	}
+	t.Setenv("ETHERNETIPCTL_FORMAT", "json")
+	if r := run(t, "version").want(t, 0); r.stdout != json {
+		t.Errorf("ETHERNETIPCTL_FORMAT=json version:\n got %q\nwant %q", r.stdout, json)
+	}
+	t.Setenv("ETHERNETIPCTL_FORMAT", "")
+	SetBuildMeta("", "", "", "")
+	r := run(t, "version").want(t, 0).has(t, "ethernetipctl ", "built unknown, ")
+	if strings.Contains(r.stdout, "tag ") || strings.Count(r.stdout, "\n") != 1 {
+		t.Errorf("version of a development build:\n%s", r.stdout)
 	}
 
 	run(t).want(t, 0).has(t, "Available Commands", "discover", "identify", "read", "write", "objects", "object", "reset",
@@ -91,31 +111,6 @@ func TestUsageErrorsHonourFormat(t *testing.T) {
 			}
 		})
 	}
-}
-
-// A binary built without the ldflags of the Makefile (go install, go build) reports what the
-// go toolchain recorded: the version of the module and the git revision.
-func TestVersionFromBuildInfo(t *testing.T) {
-	rev := []debug.BuildSetting{{Key: "vcs.revision", Value: "0123456789abcdef0123456789abcdef01234567"}}
-	for _, c := range []struct {
-		name, version, commit   string
-		info                    *debug.BuildInfo
-		wantVersion, wantCommit string
-	}{
-		{"ldflags", "v0.1.0", "abc1234", &debug.BuildInfo{Main: debug.Module{Version: "v9.9.9"}, Settings: rev}, "v0.1.0", "abc1234"},
-		{"go install", "dev", "", &debug.BuildInfo{Main: debug.Module{Version: "v0.1.0"}, Settings: rev}, "v0.1.0", "0123456"},
-		{"devel", "dev", "", &debug.BuildInfo{Main: debug.Module{Version: "(devel)"}}, "dev", ""},
-		{"no build info", "dev", "", nil, "dev", ""},
-	} {
-		t.Run(c.name, func(t *testing.T) {
-			v, commit := versionOf(c.version, c.commit, c.info)
-			if v != c.wantVersion || commit != c.wantCommit {
-				t.Errorf("versionOf(%q, %q) = %q, %q; want %q, %q", c.version, c.commit, v, commit, c.wantVersion, c.wantCommit)
-			}
-		})
-	}
-	SetBuildMeta("dev", "", "", "")
-	run(t, "version").want(t, 0).has(t, "ethernetipctl version: ")
 }
 
 func TestCompletion(t *testing.T) {

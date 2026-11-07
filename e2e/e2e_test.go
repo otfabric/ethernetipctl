@@ -46,8 +46,13 @@ func TestVersionPrintsTheBuiltVersion(t *testing.T) {
 	if want == "" {
 		t.Fatal("ETHERNETIPCTL_E2E_VERSION is not set; run make e2e")
 	}
-	if !strings.Contains(output, "ethernetipctl") || !strings.Contains(output, want) {
-		t.Fatalf("output does not name ethernetipctl %s:\n%s", want, output)
+	want = strings.TrimPrefix(want, "v")
+	if !strings.HasPrefix(output, "ethernetipctl "+want+" (") || strings.Count(output, "\n") != 1 {
+		t.Fatalf("output is not the line of ethernetipctl %s:\n%s", want, output)
+	}
+	output, code = run(t, "version", "--json")
+	if code != 0 || !strings.HasPrefix(output, `{"name":"ethernetipctl","version":"`+want+`","tag":`) {
+		t.Fatalf("version --json: exit %d\n%s", code, output)
 	}
 }
 
