@@ -1,4 +1,4 @@
-.PHONY: help all run test coverage cover compile cross lint lint-ci fmt fmt-check vet vuln build build-nocheck build-all release-all install clean e2e coverage-pkg-check fuzz
+.PHONY: help all run test coverage cover compile cross lint lint-ci fmt fmt-check vet vuln build build-nocheck build-all release-all install clean e2e coverage-pkg-check fuzz docs-check
 
 help: ## This help
 	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z0-9_-]+:.*?## / {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}' $(MAKEFILE_LIST)
@@ -30,6 +30,9 @@ BUILD_DATE ?= $(shell date -u +%Y-%m-%dT%H:%M:%SZ)
 LDFLAGS := -ldflags "-s -w -X 'main.version=$(VERSION)' -X 'main.tag=$(TAG)' -X 'main.commit=$(COMMIT)' -X 'main.buildDate=$(BUILD_DATE)'"
 RELEASE_DIR   := release
 
+# docsync release of docs-check (DOC-008).
+DOCSYNC_VERSION := v0.2.0
+
 # Minimum total statement coverage (percent) enforced by `make coverage`.
 COVERAGE_MIN ?= 90
 # Per-package floor (TEST-012), from the coverage.out of `make coverage`.
@@ -42,7 +45,7 @@ run: ## Run the application
 	@echo "Running $(APP_NAME)"
 	@go run $(APP_SRC)
 
-check: fmt fmt-check lint lint-ci vet cross vuln test coverage coverage-pkg-check ## Run all checks (format, lint, vet, 32-bit build, vulnerability scan, test, coverage)
+check: fmt fmt-check lint lint-ci vet cross vuln test coverage coverage-pkg-check docs-check ## Run all checks (format, lint, vet, 32-bit build, vulnerability scan, test, coverage, docs)
 
 test: ## Run unit tests with race detector
 	@echo "Running unit tests (race detector)"
@@ -110,6 +113,10 @@ fmt-check: ## Fail if the go.mod-version gofmt or the local gofmt would change a
 vet: ## Run go vet on project packages
 	@echo "Running go vet"
 	@go vet ./...
+
+# The documents against the code (DOC-008): docsync, as docs-check.yml runs it.
+docs-check: ## Check that the documents agree with the code (docsync)
+	@go run github.com/otfabric/docsync@$(DOCSYNC_VERSION) check .
 
 vuln: ## Scan the module and its dependencies for known vulnerabilities (govulncheck)
 	@echo "Running govulncheck"
