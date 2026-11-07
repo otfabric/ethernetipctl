@@ -28,6 +28,26 @@ Linux (amd64, arm64, armv7), macOS (Intel, Apple silicon) and Windows (amd64, ar
 
 From source (Go 1.26+): `go install github.com/otfabric/ethernetipctl@latest`
 
+### Shell completion
+
+```bash
+# bash (needs the bash-completion package)
+mkdir -p ~/.local/share/bash-completion/completions
+ethernetipctl completion bash > ~/.local/share/bash-completion/completions/ethernetipctl
+
+# zsh: a directory on your fpath, then restart the shell
+mkdir -p ~/.zsh/completions && ethernetipctl completion zsh > ~/.zsh/completions/_ethernetipctl
+# and once in ~/.zshrc:  fpath=(~/.zsh/completions $fpath); autoload -U compinit && compinit
+
+# fish
+mkdir -p ~/.config/fish/completions && ethernetipctl completion fish > ~/.config/fish/completions/ethernetipctl.fish
+```
+
+```powershell
+# PowerShell: add this line to your profile ($PROFILE)
+ethernetipctl completion powershell | Out-String | Invoke-Expression
+```
+
 ---
 
 ## Quick start
