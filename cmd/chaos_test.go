@@ -218,9 +218,7 @@ func ioUntilAdapterVanishes(t *testing.T) (int, string, string) {
 // with 130, as docs/exitcodes.md says.
 func TestChaosInterrupt(t *testing.T) {
 	f := startFixture(t)
-	if f.srv.UDPAddr() == nil {
-		t.Skip("the UDP port of the fixture is taken")
-	}
+	f.requireUDP(t)
 	interruptAfter := func(args []string, ready func(*syncBuffer) bool) (int, string) {
 		ctx, cancel := context.WithCancel(t.Context())
 		defer cancel()

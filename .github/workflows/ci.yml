@@ -29,10 +29,15 @@ jobs:
       policy-version: v1.4.1
     secrets: inherit
 
-  # The shared workflow gates the total; this job gates each package.
+  # The shared workflow gates the total; this job gates each package. Its runner has what
+  # the prerequisite-gated tests need (the fixture's UDP port on loopback, mkfifo), so the
+  # ETHERNETIPCTL_REQUIRE_* switches turn a skip there into a failure.
   coverage-floor:
     name: Per-package coverage floor
     runs-on: ubuntu-latest
+    env:
+      ETHERNETIPCTL_REQUIRE_UDP: "1"
+      ETHERNETIPCTL_REQUIRE_FIFO: "1"
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-go@v7

@@ -473,9 +473,7 @@ func listIdentityReply(t *testing.T, f *fixture) []byte {
 // The result keeps to --max-devices, ends within --wait, and stays valid JSON.
 func TestHostileDiscoverFlood(t *testing.T) {
 	f := startFixture(t)
-	if f.srv.UDPAddr() == nil {
-		t.Skip("the UDP port of the fixture is taken")
-	}
+	f.requireUDP(t)
 	template := listIdentityReply(t, f)
 	dev, err := net.ListenPacket("udp4", "127.0.0.1:0")
 	must(t, err)
