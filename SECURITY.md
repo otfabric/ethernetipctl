@@ -19,8 +19,8 @@ We will acknowledge your report within 48 hours and aim to provide a fix or miti
 
 | Version | Supported |
 |---------|-----------|
-| 0.5.x | Yes |
-| < 0.5 | No |
+| Latest release | Yes |
+| Older releases | No |
 
 ## Security Considerations
 
