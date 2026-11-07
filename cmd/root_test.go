@@ -10,6 +10,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 
+	"github.com/otfabric/ethernetipctl/internal/buildinfo"
 	"github.com/otfabric/ethernetipctl/internal/runner"
 )
 
@@ -17,10 +18,18 @@ func TestVersionHelpAndUsage(t *testing.T) {
 	const sha = "1802d0f9afe8642d1e278120b76fcdfac967cb9e"
 	SetBuildMeta("1.2.3", "v1.2.3", sha, "2026-01-31T12:00:00Z")
 	t.Cleanup(func() { SetBuildMeta("", "", "", "") })
+	libText, libJSON := "", []string{}
+	for _, l := range buildinfo.Get("ethernetipctl").Libraries {
+		libText += l.Name + " " + l.Version + ", "
+		libJSON = append(libJSON, `{"name":"`+l.Name+`","version":"`+l.Version+`"}`)
+	}
+	if !strings.Contains(libText, "go-ethernetip ") {
+		t.Errorf("the libraries lack go-ethernetip: %q", libText)
+	}
 	tail := runtime.Version() + ", " + runtime.GOOS + "/" + runtime.GOARCH
-	text := "ethernetipctl 1.2.3 (tag v1.2.3, commit " + sha + ", built 2026-01-31T12:00:00Z, " + tail + ")\n"
-	json := `{"name":"ethernetipctl","version":"1.2.3","tag":"v1.2.3","commit":"` + sha + `","built":"2026-01-31T12:00:00Z","go":"` +
-		runtime.Version() + `","platform":"` + runtime.GOOS + "/" + runtime.GOARCH + "\"}\n"
+	text := "ethernetipctl 1.2.3 (tag v1.2.3, commit " + sha + ", built 2026-01-31T12:00:00Z, " + libText + tail + ")\n"
+	json := `{"name":"ethernetipctl","version":"1.2.3","tag":"v1.2.3","commit":"` + sha + `","built":"2026-01-31T12:00:00Z","libraries":[` +
+		strings.Join(libJSON, ",") + `],"go":"` + runtime.Version() + `","platform":"` + runtime.GOOS + "/" + runtime.GOARCH + "\"}\n"
 	if r := run(t, "version").want(t, 0); r.stdout != text {
 		t.Errorf("version:\n got %q\nwant %q", r.stdout, text)
 	}

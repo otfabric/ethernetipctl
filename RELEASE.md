@@ -14,20 +14,22 @@ offers file names for addresses, numbers and paths.
 ## Changes
 
 - **version**: one line, `ethernetipctl 0.6.0 (tag v0.6.0, commit <sha>,
-  built <date>, go1.26.10, linux/amd64)`, instead of one line per field.
+  built <date>, go-ethernetip 0.5.2, go1.26.10, linux/amd64)`, instead of one
+  line per field, with the OT Fabric libraries of the build.
   No leading `v`; the tag is left out when there is none; the full commit
   (from the build, or from Go's build information with `-dirty` for a
-  modified tree); a development build is `dev`, built `unknown`. Scripts that
+  modified tree); a development build (a pseudo-version too) is `dev`,
+  built `unknown`. Scripts that
   read `ethernetipctl version: …` should use `version --json`.
 - **version --json** (new), and `version` with `--format json` or
-  `ETHERNETIPCTL_FORMAT=json`: `{"name","version","tag","commit","built","go","platform"}`.
+  `ETHERNETIPCTL_FORMAT=json`: `{"name","version","tag","commit","built","libraries","go","platform"}`.
 - **completion**: bash, zsh, fish and PowerShell, as before. The EDS argument
   of `eds inspect`, `validate` and `codegen` completes `.eds` files,
   `eds generate --output` `.eds`, `eds codegen --output` `.go`, and
   `adapter --config` YAML or JSON files. Hosts, paths, numbers and durations
   complete nothing instead of file names.
-- **Makefile**: injects the full commit SHA, and no version placeholder
-  without git.
+- **Makefile**: injects the full commit SHA, and a version and tag only when
+  HEAD is exactly on a tag (otherwise the binary reports `dev`).
 
 ---
 
