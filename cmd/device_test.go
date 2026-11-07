@@ -343,9 +343,7 @@ func TestDiagnose(t *testing.T) {
 
 func TestDiscover(t *testing.T) {
 	f := startFixture(t)
-	if f.srv.UDPAddr() == nil {
-		t.Skip("the UDP port of the fixture is taken")
-	}
+	f.requireUDP(t)
 	r := run(t, "discover", "--address", f.addr, "--wait", "300ms", "--local", "127.0.0.1", "--max-delay", "10ms").want(t, 0)
 	r.has(t, "1 device(s)", `"test adapter" (vendor 1 Rockwell Automation/Allen-Bradley, Communications Adapter, product 42, rev 3.7, serial 0x12345678)`)
 	m := run(t, "discover", "--address", f.addr, "--wait", "300ms", "--max-devices", "1", "--format", "json").want(t, 0).json(t)

@@ -27,7 +27,10 @@ func feedFIFO(t *testing.T, name string, head, line []byte) (string, func() int)
 	t.Helper()
 	p := filepath.Join(t.TempDir(), name)
 	if err := syscall.Mkfifo(p, 0o600); err != nil {
-		t.Skipf("mkfifo: %v", err)
+		if os.Getenv("ETHERNETIPCTL_REQUIRE_FIFO") == "1" {
+			t.Fatalf("ETHERNETIPCTL_REQUIRE_FIFO=1: mkfifo: %v", err)
+		}
+		t.Skipf("mkfifo: %v (ETHERNETIPCTL_REQUIRE_FIFO=1 makes this a failure)", err)
 	}
 	fed := make(chan int, 1)
 	go func() {

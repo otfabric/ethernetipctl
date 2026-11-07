@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net"
+	"os"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -271,6 +272,20 @@ func startFixture(t testing.TB, opts ...server.Option) *fixture {
 		}
 	})
 	return f
+}
+
+// requireUDP skips a test that needs the fixture's UDP port, which the server leaves out
+// when another socket holds it, or fails it with ETHERNETIPCTL_REQUIRE_UDP=1 (set in CI,
+// whose runners have the port, so a test there cannot skip silently).
+func (f *fixture) requireUDP(t testing.TB) {
+	t.Helper()
+	if f.srv.UDPAddr() != nil {
+		return
+	}
+	if os.Getenv("ETHERNETIPCTL_REQUIRE_UDP") == "1" {
+		t.Fatal("ETHERNETIPCTL_REQUIRE_UDP=1: the UDP port of the fixture is taken")
+	}
+	t.Skip("the UDP port of the fixture is taken (ETHERNETIPCTL_REQUIRE_UDP=1 makes this a failure)")
 }
 
 // cli runs ethernetipctl with the fixture's address after the command words: the words

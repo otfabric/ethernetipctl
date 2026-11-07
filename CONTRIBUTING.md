@@ -78,6 +78,7 @@ Examples:
 - Add tests for new functionality in the appropriate `_test.go` file
 - Anything that talks to a device runs against a real go-ethernetip server on a free loopback port: `startFixture` in [`cmd/helper_test.go`](cmd/helper_test.go) serves OpENer's sample assemblies, an output echoed to the input, a Logix tag database, and counts sessions and requests (which proves that a change without `--yes` sends nothing). Command tests run the real command tree through `cmd.Run` and assert on stdout, stderr and the exit code
 - The JSON output of representative commands is pinned by golden files in `cmd/testdata/golden`; after an intended change, regenerate them with `go test ./cmd -run TestGoldenJSON -update` and review the diff
+- A test whose prerequisite this machine may lack skips, and the skip message names its switch: with the switch set to `1` the test fails instead. `ETHERNETIPCTL_REQUIRE_UDP=1` covers the tests that need the fixture's UDP port (`discover`, the discover flood, interrupting `io`), which the server leaves out when another socket holds it; `ETHERNETIPCTL_REQUIRE_FIFO=1` covers the endless-input tests that need `mkfifo`. The per-package coverage job in CI sets both. Platform skips (`/dev/full` off Linux, file modes on Windows) and `-short` have no switch
 - Assert behaviour (output, exit code, the device's data), not just that the code ran
 - Tests must not write files into the repository: use `t.TempDir()`
 - Do not assume timing a device does not promise: wait for a condition with a deadline (`eventually`) instead of sleeping
