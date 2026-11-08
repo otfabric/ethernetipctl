@@ -1,5 +1,33 @@
 # ethernetipctl Releases
 
+## v0.7.0
+
+**Date:** 2026-11-08
+**Previous release:** v0.6.0
+
+## Summary
+
+Built on go-ethernetip v0.6.0, which is now tested against recorded traffic
+of real Rockwell devices (a 1756-L63 ControlLogix, a 1756-ENBT/A, a Micro850
+and a MicroLogix 1400). Three corrections that recordings showed reach the
+CLI; no flag, exit code or JSON output changes.
+
+## Changes
+
+- **tag template**, **tag list**, **tag read** of structures: a template's
+  definition is read with attribute 4 × 4 − 20 octets, as RSLogix 5000 reads
+  a 1756-L63's templates; with × 4 − 23, against such a controller the end
+  of the last member's name was lost ("U" for "UN").
+- **adapter** (Logix model): a BOOL tag written with any non-zero value reads
+  back as 1, as on a recorded Micro850; it read back the written octet
+  (0xFF).
+- **adapter**: SendRRData replies carry the request's timeout, as the
+  recorded ControlLogix module answers; they carried 0.
+- **Dependencies**: go-ethernetip v0.6.0.
+- **Docs**: the `version` example in docs/commands.md.
+
+---
+
 ## v0.6.0
 
 **Date:** 2026-11-07

@@ -1,8 +1,8 @@
 github.com/cpuguy83/go-md2man/v2 v2.0.6/go.mod h1:oOW0eioCTA6cOiMLiUPZOpcVxMig6NIQQ7OS05n1F4g=
 github.com/inconshreveable/mousetrap v1.1.0 h1:wN+x4NVGpMsO7ErUn/mUI3vEoE6Jt13X2s0bqwp9tc8=
 github.com/inconshreveable/mousetrap v1.1.0/go.mod h1:vpF70FUmC8bwa3OWnCshd2FqLfsEA9PFc4w1p2J65bw=
-github.com/otfabric/go-ethernetip v0.5.2 h1:BpdSWlYLcSld4FgvQIldHn2Uvj/eKrKRp+Plyyq4sKI=
-github.com/otfabric/go-ethernetip v0.5.2/go.mod h1:XU26aXibGt1e91H7gbnSfWVRAPUgudNm9DdpFtLPmXM=
+github.com/otfabric/go-ethernetip v0.6.0 h1:O0e8CHdNFmp+3Hv7b9N40pFmPA7qbKQOPnsnX9tHtnw=
+github.com/otfabric/go-ethernetip v0.6.0/go.mod h1:XU26aXibGt1e91H7gbnSfWVRAPUgudNm9DdpFtLPmXM=
 github.com/russross/blackfriday/v2 v2.1.0/go.mod h1:+Rmxgy9KzJVeS9/2gXHxylqXiyQDYRxCVz55jmeOWTM=
 github.com/spf13/cobra v1.10.2 h1:DMTTonx5m65Ic0GOoRY2c16WCbHxOOw6xxezuLaBpcU=
 github.com/spf13/cobra v1.10.2/go.mod h1:7C1pvHqHw5A4vrJfjNwvOdzYu0Gml16OCs2GRiTUUS4=
