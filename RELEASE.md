@@ -1,5 +1,22 @@
 # ethernetipctl Releases
 
+## v0.8.1
+
+**Date:** 2026-11-14
+**Previous release:** v0.8.0
+
+## Summary
+
+Built on go-ethernetip v0.8.0 (was v0.7.0), with v0.7.1 in between. No flag, exit code or JSON output changes.
+
+## Changes
+
+- **adapter**: a request handler or `Assembly.OnWrite` that does not return normally is logged at Error level with its stack, its request is answered with general status 0x10, and the adapter goes on serving (go-ethernetip RELEASE.md, v0.8.0). The inactivity timeout set to 0 at run time holds for open sessions (v0.7.1).
+- **io**: the scanner refuses a Forward_Open reply whose O->T connection ID is 0, and `Close` returns from the scanner's callbacks (v0.7.1, v0.8.0). The floors on the O->T actual packet interval keep their values: a quarter of the RPI, and 100 µs.
+- **eds**: the EDS parser bounds sections and fields (v0.7.1).
+
+---
+
 ## v0.8.0
 
 **Date:** 2026-11-14
