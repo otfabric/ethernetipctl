@@ -491,7 +491,9 @@ func TestHostileDiscoverFlood(t *testing.T) {
 		}
 	})
 	rnd := rand.New(rand.NewPCG(5, 6))
-	done := make(chan struct{})
+	done, stop := make(chan struct{}), make(chan struct{})
+	stopDevices := sync.OnceFunc(func() { close(stop) })
+	t.Cleanup(stopDevices)
 	go func() {
 		defer close(done)
 		buf := make([]byte, 1500)
@@ -520,14 +522,27 @@ func TestHostileDiscoverFlood(t *testing.T) {
 		}
 		good := append([]byte(nil), template...)
 		copy(good[12:20], ctx)
-		for _, s := range socks {
-			for range 5 { // duplicates of each device
-				_, _ = s.WriteTo(good, from)
+		// The flood can fill the command's receive buffer (Linux's default
+		// is about 208 KiB): until the command has read the junk, the kernel
+		// drops what follows, and a command scheduled late on a busy
+		// machine missed every reply (ethernetipctl#26). The devices repeat
+		// their replies, more duplicates, until the command is done.
+		for {
+			for _, s := range socks {
+				for range 5 { // duplicates of each device
+					_, _ = s.WriteTo(good, from)
+				}
+			}
+			select {
+			case <-stop:
+				return
+			case <-time.After(20 * time.Millisecond):
 			}
 		}
 	}()
 	start := time.Now()
 	r := run(t, "discover", "--address", dev.LocalAddr().String(), "--wait", "2s", "--max-devices", "10", "--format", "json").want(t, 0)
+	stopDevices()
 	m := r.json(t)
 	if m["found"] != 10.0 {
 		t.Errorf("found %v, want 10 (--max-devices)", m["found"])
