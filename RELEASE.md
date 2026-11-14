@@ -1,5 +1,35 @@
 # ethernetipctl Releases
 
+## v0.8.0
+
+**Date:** 2026-11-14
+**Previous release:** v0.7.0
+
+## Summary
+
+Built on go-ethernetip v0.7.0 (was v0.6.0), which tightens bounds and
+lifecycles in the server, the scanner, the Logix client and emulation, and
+the EDS package. No flag, exit code or JSON output changes.
+
+## Changes
+
+- **adapter**: a connection whose TLS handshake fails frees its place under
+  the TCP connection limit; Multiple Service Packet and attribute-list
+  replies stop with 0x11 as soon as they exceed what the packet or the
+  connection can carry; a Forward_Close during a multicast Forward_Open
+  leaves no producer running.
+- **io**: the scanner refuses a Forward_Open reply with a T->O actual packet
+  interval of 0 or an O->T interval below a quarter of the requested RPI,
+  and sends O->T data to the target's address.
+- **tag list**, **tag template**: stop with a protocol error after 65536
+  partial replies (or 16 MiB for the tag list).
+- **eds**: entries that name the same number (`Param1`, `Param01`) give one
+  entry, and validation reports the duplicates; validation runs in linear
+  time.
+- **Dependencies**: go-ethernetip v0.7.0.
+
+---
+
 ## v0.7.0
 
 **Date:** 2026-11-08
