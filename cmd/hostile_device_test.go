@@ -14,8 +14,10 @@ import (
 	"sync/atomic"
 	"testing"
 	"time"
+	"unicode/utf8"
 
 	"github.com/otfabric/go-ethernetip/cip"
+	"github.com/otfabric/go-ethernetip/logix"
 	"github.com/otfabric/go-ethernetip/server"
 )
 
@@ -611,5 +613,79 @@ func TestHostileDeviceDropsAfterNOctets(t *testing.T) {
 			})
 			hostileRun(t, 500*time.Millisecond, []int{4, 5, 6}, "read", p.addr, "@1/1/7")
 		})
+	}
+}
+
+// unprintable returns the runes of s that are neither printable nor a newline or tab,
+// and the octets that are not UTF-8.
+func unprintable(s string) []string {
+	var out []string
+	for i, r := range s {
+		switch {
+		case r == '\n' || r == '\t':
+		case r == utf8.RuneError:
+			out = append(out, strconv.Quote(s[i:i+1]))
+		case !strconv.IsPrint(r):
+			out = append(out, strconv.QuoteRuneToASCII(r))
+		}
+	}
+	return out
+}
+
+// odd holds what does not print: escape sequences, CR, BEL, DEL, a C1 control, U+2028 and
+// an octet that is not UTF-8.
+const odd = "a\x1b]0;x\x07\r\x7f\u0085\u2028\xffb"
+
+// Names and strings a device sends reach text and table output escaped: no control
+// character, line separator or octet that is not UTF-8 reaches the terminal. JSON escapes
+// them itself.
+func TestDeviceStringsArePrintable(t *testing.T) {
+	id := testIdentity
+	id.ProductName = "dev" + odd
+	f := startFixture(t, server.WithIdentity(id))
+	must(t, f.tags.AddTemplate(logix.Template{ID: 0x124, Name: "T" + odd, Handle: 0xBEF0, Size: 8,
+		Members: []logix.Member{
+			{Name: "m" + odd, Type: logix.NewAtomicType(cip.TypeDINT, 0, 0), Offset: 0},
+			{Name: "s" + odd, Type: logix.NewAtomicType(cip.TypeDINT, 0, 0), Offset: 4},
+		}}))
+	must(t, f.tags.AddStructTag("Odd", 0x124))
+
+	services := startFakeDevice(t, func(c net.Conn, h encapHeader, _ []byte) bool {
+		if h.command != 0x0004 { // ListServices
+			return false
+		}
+		name := make([]byte, 16)
+		copy(name, "svc\x1b[2J\r\x07")
+		item := binary.LittleEndian.AppendUint16(nil, 1)      // version
+		item = binary.LittleEndian.AppendUint16(item, 0x0120) // capabilities: TCP and UDP
+		item = append(item, name...)
+		cpf := binary.LittleEndian.AppendUint16(nil, 1) // item count
+		cpf = binary.LittleEndian.AppendUint16(cpf, 0x0100)
+		cpf = binary.LittleEndian.AppendUint16(cpf, uint16(len(item)))
+		_, _ = c.Write(reply(h, append(cpf, item...)))
+		return true
+	})
+
+	for _, format := range []string{"text", "table"} {
+		for _, args := range [][]string{
+			{"identify", "ADDR"},
+			{"status", "ADDR"},
+			{"diagnose", "ADDR"},
+			{"tag", "list", "ADDR"},
+			{"tag", "types", "ADDR", "0x124"},
+			{"tag", "decode", "ADDR", "Odd"},
+			{"services", services.addr},
+		} {
+			t.Run(strings.Join(args[:len(args)-1], " ")+" "+format, func(t *testing.T) {
+				r := f.run(t, append(args, "--format", format)...).want(t, 0)
+				if bad := unprintable(r.stdout); len(bad) > 0 {
+					t.Errorf("not escaped: %v\n%s", bad, strconv.Quote(r.stdout))
+				}
+			})
+		}
+	}
+	m := f.run(t, "identify", "ADDR", "--format", "json").want(t, 0).json(t)
+	if got := m["identity"].(map[string]any)["product_name"]; got != strings.ToValidUTF8("dev"+odd, "\uFFFD") {
+		t.Errorf("JSON product_name %q", got)
 	}
 }

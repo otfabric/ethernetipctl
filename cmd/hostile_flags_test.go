@@ -98,6 +98,7 @@ var invalidCases = [][]string{
 	{"reset", "ADDR", "--type", "-1", "--yes"},
 	{"reset", "ADDR", "--type", "9223372036854775807", "--yes"},
 	{"reset", "ADDR", "--type", "-9223372036854775808", "--yes"},
+	{"reset", "ADDR", "--type", "4294967296", "--yes"}, // 0 in the low 32 bits
 	// --rpi: below a microsecond, negative, above the 32-bit microseconds of the wire.
 	{"forward-open", "ADDR", "--output", "150", "--input", "100", "--rpi", "999ns"},
 	{"forward-open", "ADDR", "--output", "150", "--input", "100", "--rpi", "-1ms"},
@@ -121,6 +122,7 @@ var invalidCases = [][]string{
 	{"tag", "read", "ADDR", "Count", "--count", "65536"},
 	{"tag", "read", "ADDR", "Count", "--count", "9223372036854775807"},
 	{"tag", "read", "ADDR", "Count", "--count", "-9223372036854775808"},
+	{"tag", "read", "ADDR", "Count", "--count", "4294967297"}, // 1 in the low 32 bits
 	// Instances and paths at the bound of their 32 and 16 bits and one past.
 	{"read", "ADDR", "@1/4294967296/1"},
 	{"read", "ADDR", "@1/1/65536"},

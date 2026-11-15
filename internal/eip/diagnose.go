@@ -44,8 +44,8 @@ func (t *timingDialer) result() (time.Duration, error, bool) {
 
 // Diagnose runs `diagnose`: structured checks, each with its outcome and timing. A failed
 // check does not stop the others, except that the checks after a failed TCP connect or
-// RegisterSession are skipped. It returns the exit code: 0 when every check passed, 7
-// (partial) otherwise.
+// RegisterSession are skipped. It returns the exit code: 0 when every check passed, 1
+// (findings) otherwise.
 func (e Env) Diagnose(ctx context.Context, host string) (*types.DiagnoseResult, int, error) {
 	t, err := e.ParseTarget(host)
 	if err != nil {

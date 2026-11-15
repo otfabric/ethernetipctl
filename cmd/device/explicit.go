@@ -194,8 +194,9 @@ The value is --data, hex octets as the device encodes them, or --value encoded a
 		Args: cobra.ExactArgs(2),
 	}
 	cfg := config.WriteConfig{}
-	runner.RegisterCommandCfg(cmd, &cfg, typeCompletion)
+	runner.RegisterCommandCfg(cmd, &cfg, typeCompletion, cli.RouteFromFlagOnly)
 	cmd.RunE = func(cmd *cobra.Command, args []string) error {
+		cli.NoteEnvRouteNotUsed(cmd)
 		e := Env(cmd, g)
 		return Formatted(cmd, g, func() error { _, _, _, err := eip.CheckWrite(args[1], cfg); return err },
 			func(ctx context.Context) (any, error) { return e.Write(ctx, args[0], args[1], cfg) })
@@ -270,8 +271,9 @@ Type 0 (the default) emulates a power cycle.`,
 		Args: cobra.ExactArgs(1),
 	}
 	cfg := config.ResetConfig{}
-	runner.RegisterCommandCfg(cmd, &cfg, enum("type", "0", "1"))
+	runner.RegisterCommandCfg(cmd, &cfg, enum("type", "0", "1"), cli.RouteFromFlagOnly)
 	cmd.RunE = func(cmd *cobra.Command, args []string) error {
+		cli.NoteEnvRouteNotUsed(cmd)
 		e := Env(cmd, g)
 		return Formatted(cmd, g, func() error { return eip.CheckReset(cfg) },
 			func(ctx context.Context) (any, error) { return e.Reset(ctx, args[0], cfg) })
@@ -344,8 +346,9 @@ connection owns the assembly.`,
 		Args: cobra.ExactArgs(2),
 	}
 	wcfg := config.AssemblyConfig{}
-	runner.RegisterCommandCfg(write, &wcfg)
+	runner.RegisterCommandCfg(write, &wcfg, cli.RouteFromFlagOnly)
 	write.RunE = func(cmd *cobra.Command, args []string) error {
+		cli.NoteEnvRouteNotUsed(cmd)
 		e := Env(cmd, g)
 		return Formatted(cmd, g, func() error { _, err := eip.CheckAssemblyWrite(args[1], wcfg); return err },
 			func(ctx context.Context) (any, error) { return e.AssemblyWrite(ctx, args[0], args[1], wcfg) })
@@ -372,7 +375,7 @@ duration:
 
 Nothing is changed on the device. A failed check does not stop the others; after a failed
 TCP connect or RegisterSession the rest are skipped. The report is always written: the exit
-code is 0 when every check passed and 7 (partial) when one failed or was skipped.`,
+code is 0 when every check passed and 1 (findings) when one failed or was skipped.`,
 		Example: `
   ethernetipctl diagnose 192.168.1.10
   ethernetipctl diagnose 192.168.1.10 --format json --timeout 2s

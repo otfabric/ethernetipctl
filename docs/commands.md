@@ -62,7 +62,7 @@ Usage: `ethernetipctl assembly write <host[:port]> <instance> --data HEX --yes [
 |---|---|---|
 | `--connected` |  | Send the requests over a connected (Class 3) messaging connection, opened with Forward_Open, instead of as unconnected messages [env: ETHERNETIPCTL_CONNECTED] |
 | `--data string` |  | Data to write as hex octets (assembly write) |
-| `--route string` |  | Route through the target to another device, as port/link pairs, comma-separated: 1/0 is slot 0 of the backplane, 1/0,2/192.168.1.10 then port 2 to that address [env: ETHERNETIPCTL_ROUTE] |
+| `--route string` |  | Route through the target to another device, as port/link pairs, comma-separated: 1/0 is slot 0 of the backplane, 1/0,2/192.168.1.10 then port 2 to that address (only from the command line: a change does not take ETHERNETIPCTL_ROUTE) |
 | `--yes` |  | Confirm the write: without it nothing is sent (assembly write) |
 
 ## `ethernetipctl completion`
@@ -164,12 +164,12 @@ Usage: `ethernetipctl forward-close <host[:port]> --connection-serial N --origin
 
 ## `ethernetipctl forward-open`
 
-Usage: `ethernetipctl forward-open <host[:port]> --output N --input N --rpi D [--config N] [--output-size N] [--input-size N] [flags]`
+Usage: `ethernetipctl forward-open <host[:port]> --output N --input N --rpi D [--config N] [--output-size N] [--input-size N] [--config-data HEX --yes] [flags]`
 
 | Flag | Short | Meaning |
 |---|---|---|
 | `--config uint32` |  | Configuration assembly instance (0 = none; sent as instance 0 in the path) |
-| `--config-data string` |  | Configuration data sent in the connection path, as hex (an even number of octets) |
+| `--config-data string` |  | Configuration data sent in the connection path, as hex (an even number of octets); the target writes it to its configuration assembly, so it needs --yes |
 | `--connection-serial uint16` |  | Connection serial number (0 = random) |
 | `--input uint32` |  | T->O connection point: the input assembly |
 | `--input-size uint16` |  | Size of the input (T->O) data in octets, without sequence count |
@@ -183,6 +183,7 @@ Usage: `ethernetipctl forward-open <host[:port]> --output N --input N --rpi D [-
 | `--route string` |  | Route through the target to another device, as port/link pairs, comma-separated: 1/0 is slot 0 of the backplane, 1/0,2/192.168.1.10 then port 2 to that address [env: ETHERNETIPCTL_ROUTE] |
 | `--rpi duration` |  | Requested packet interval of both directions, e.g. 10ms |
 | `--timeout-multiplier uint8` |  | The connection times out after RPI x 4 << multiplier (0-7) |
+| `--yes` |  | Confirm that the target writes --config-data to its configuration assembly: without it nothing is sent |
 
 ## `ethernetipctl help`
 
@@ -213,7 +214,7 @@ Usage: `ethernetipctl io <host[:port]> --output N --input N --rpi D [--output-si
 |---|---|---|
 | `--changes` |  | Only write a sample when the input data or run state changes |
 | `--config uint32` |  | Configuration assembly instance (0 = none; sent as instance 0 in the path) |
-| `--config-data string` |  | Configuration data sent in the connection path, as hex (an even number of octets) |
+| `--config-data string` |  | Configuration data sent in the connection path, as hex (an even number of octets); the target writes it to its configuration assembly, so it needs --yes |
 | `--count uint32` |  | Stop after this many input samples (0 = until interrupted) |
 | `--duration duration` |  | Stop after this long (0 = until interrupted) |
 | `--idle` |  | Send the output in idle instead of run |
@@ -227,7 +228,7 @@ Usage: `ethernetipctl io <host[:port]> --output N --input N --rpi D [--output-si
 | `--output-size uint16` |  | Size of the output (O->T) data in octets, without sequence count and run/idle header; 0 for a heartbeat |
 | `--rpi duration` |  | Requested packet interval of both directions, e.g. 10ms |
 | `--timeout-multiplier uint8` |  | The connection times out after RPI x 4 << multiplier (0-7) |
-| `--yes` |  | Confirm that the connection writes output data (--output-size above 0): without it nothing is sent |
+| `--yes` |  | Confirm that the connection writes output data (--output-size above 0) or --config-data: without it nothing is sent |
 
 ## `ethernetipctl object`
 
@@ -266,7 +267,7 @@ Usage: `ethernetipctl reset <host[:port]> [--type 0|1] --yes [flags]`
 
 | Flag | Short | Meaning |
 |---|---|---|
-| `--route string` |  | Route through the target to another device, as port/link pairs, comma-separated: 1/0 is slot 0 of the backplane, 1/0,2/192.168.1.10 then port 2 to that address [env: ETHERNETIPCTL_ROUTE] |
+| `--route string` |  | Route through the target to another device, as port/link pairs, comma-separated: 1/0 is slot 0 of the backplane, 1/0,2/192.168.1.10 then port 2 to that address (only from the command line: a change does not take ETHERNETIPCTL_ROUTE) |
 | `--type int` |  | Reset type of the Identity object: 0 emulates a power cycle, 1 returns to factory defaults |
 | `--yes` |  | Confirm the reset: without it nothing is sent |
 
@@ -351,7 +352,7 @@ Usage: `ethernetipctl tag write <host[:port]> <tag> --type T --value V[,V...] --
 | Flag | Short | Meaning |
 |---|---|---|
 | `--connected` |  | Send the requests over a connected (Class 3) messaging connection, opened with Forward_Open, instead of as unconnected messages [env: ETHERNETIPCTL_CONNECTED] |
-| `--route string` |  | Route through the target to another device, as port/link pairs, comma-separated: 1/0 is slot 0 of the backplane, 1/0,2/192.168.1.10 then port 2 to that address [env: ETHERNETIPCTL_ROUTE] |
+| `--route string` |  | Route through the target to another device, as port/link pairs, comma-separated: 1/0 is slot 0 of the backplane, 1/0,2/192.168.1.10 then port 2 to that address (only from the command line: a change does not take ETHERNETIPCTL_ROUTE) |
 | `--type string` |  | Data type of the value: BOOL, SINT, INT, DINT, LINT, USINT, UINT, UDINT, ULINT, REAL, LREAL, BYTE, WORD, DWORD, LWORD or STRING (Logix STRING) |
 | `--value string` |  | Value to write; several comma-separated for consecutive array elements |
 | `--yes` |  | Confirm the write: without it nothing is sent |
@@ -384,7 +385,7 @@ Usage: `ethernetipctl write <host[:port]> <@class/instance/attribute> (--data HE
 |---|---|---|
 | `--connected` |  | Send the requests over a connected (Class 3) messaging connection, opened with Forward_Open, instead of as unconnected messages [env: ETHERNETIPCTL_CONNECTED] |
 | `--data string` |  | Value to write as hex octets, as the target encodes it (0a00, "0a 00") |
-| `--route string` |  | Route through the target to another device, as port/link pairs, comma-separated: 1/0 is slot 0 of the backplane, 1/0,2/192.168.1.10 then port 2 to that address [env: ETHERNETIPCTL_ROUTE] |
+| `--route string` |  | Route through the target to another device, as port/link pairs, comma-separated: 1/0 is slot 0 of the backplane, 1/0,2/192.168.1.10 then port 2 to that address (only from the command line: a change does not take ETHERNETIPCTL_ROUTE) |
 | `--type string` |  | Data type of --value: BOOL, SINT, INT, DINT, LINT, USINT, UINT, UDINT, ULINT, REAL, LREAL, BYTE, WORD, DWORD, LWORD, SHORT_STRING, STRING, STRING2 |
 | `--value string` |  | Value to write, with --type; several comma-separated for an array |
 | `--yes` |  | Confirm the write: without it nothing is sent |

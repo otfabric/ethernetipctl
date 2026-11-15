@@ -8,7 +8,9 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
+	"time"
 )
 
 // adapterRun is an `adapter` command running in a goroutine.
@@ -168,5 +170,77 @@ func TestAdapterInvalid(t *testing.T) {
 	// An unwritable stdout is an output error.
 	if code := Run(t.Context(), []string{"adapter", "--listen", "127.0.0.1:0", "--io-address", "127.0.0.1:0", "--duration", "1ms"}, failingWriter{}, &syncBuffer{}); code != 10 {
 		t.Errorf("unwritable stdout: %d", code)
+	}
+}
+
+// stalledWriter takes the first write and holds every later one until release is closed:
+// a stdout that stops reading.
+type stalledWriter struct {
+	mu      sync.Mutex
+	writes  int
+	first   chan string
+	release chan struct{}
+	buf     syncBuffer
+}
+
+func (w *stalledWriter) Write(p []byte) (int, error) {
+	w.mu.Lock()
+	w.writes++
+	n := w.writes
+	w.mu.Unlock()
+	if n == 1 {
+		w.first <- string(p)
+	} else {
+		<-w.release
+	}
+	return w.buf.Write(p)
+}
+
+// While stdout takes no events the adapter goes on serving, and it stops when it is
+// interrupted; the events wait for stdout, which gets them once it reads again.
+func TestAdapterServesWhileStdoutStalls(t *testing.T) {
+	w := &stalledWriter{first: make(chan string, 1), release: make(chan struct{})}
+	released := false
+	defer func() {
+		if !released {
+			close(w.release)
+		}
+	}()
+	ctx, cancel := context.WithCancel(t.Context())
+	defer cancel()
+	done := make(chan int, 1)
+	var stderr syncBuffer
+	go func() {
+		done <- Run(ctx, []string{"adapter", "--listen", "127.0.0.1:0", "--io-address", "127.0.0.1:0", "--format", "json", "--requests"}, w, &stderr)
+	}()
+	var ev map[string]any
+	if err := json.Unmarshal([]byte(<-w.first), &ev); err != nil || ev["event"] != "listening" {
+		t.Fatalf("first event %v (%v)", ev, err)
+	}
+	addr := ev["address"].(string)
+
+	// Stdout now holds every write: the adapter still answers.
+	for range 3 {
+		run(t, "identify", addr, "--timeout", "2s").want(t, 0).has(t, "ethernetipctl adapter")
+	}
+	cancel()
+	select {
+	case code := <-done:
+		if code != 0 {
+			t.Errorf("exit code %d\n%s", code, stderr.String())
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("the adapter did not stop while stdout stalled")
+	}
+
+	close(w.release)
+	released = true
+	eventually(t, "the events written once stdout reads again", func() bool { return strings.Contains(w.buf.String(), `"event":"stopping"`) })
+	evs := map[string]int{}
+	for _, e := range jsonLines(t, w.buf.String()) {
+		evs[e["event"].(string)]++
+	}
+	if evs["connected"] != 3 || evs["request"] == 0 {
+		t.Errorf("events %v", evs)
 	}
 }

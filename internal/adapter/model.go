@@ -219,11 +219,27 @@ func (id Identity) identity() (cip.Identity, error) {
 	return out, nil
 }
 
+// The bounds of a model, beyond those of each assembly and tag: the data the adapter
+// holds for it (the sizes of the assemblies and of the tags) and the number of
+// assemblies, tags and templates. A model above them is refused before anything is
+// built, so that what the adapter allocates follows from these bounds rather than from
+// the sizes a model declares.
+const (
+	maxModelData       = 64 << 20
+	maxModelAssemblies = 4096
+	maxModelTags       = 4096
+	maxModelTemplates  = 4096
+)
+
 // Check validates the model without building a server.
 func (m *Model) Check() error {
 	if _, err := m.Identity.identity(); err != nil {
 		return err
 	}
+	if n := len(m.Assemblies); n > maxModelAssemblies {
+		return fmt.Errorf("%d assemblies: at most %d", n, maxModelAssemblies)
+	}
+	total := int64(0)
 	seen := map[uint32]Assembly{}
 	for _, a := range m.Assemblies {
 		k, ok := assemblyKinds[a.Kind]
@@ -246,6 +262,7 @@ func (m *Model) Check() error {
 			}
 		}
 		seen[a.Instance] = a
+		total += int64(a.Size)
 	}
 	for _, e := range m.Echo {
 		o, i := seen[e.Output], seen[e.Input]
@@ -253,7 +270,87 @@ func (m *Model) Check() error {
 			return fmt.Errorf("echo %d -> %d: needs an output and an input assembly of the same size", e.Output, e.Input)
 		}
 	}
+	if m.Logix != nil {
+		tags, err := m.Logix.check()
+		if err != nil {
+			return err
+		}
+		total += tags
+	}
+	if total > maxModelData {
+		return fmt.Errorf("the assemblies and tags hold more than %d MiB of data", maxModelData>>20)
+	}
 	return nil
+}
+
+// check validates the bounds of the tag database and returns the octets its tags hold,
+// or a number above maxModelData once they hold more.
+func (l *Logix) check() (int64, error) {
+	if n := len(l.Templates); n > maxModelTemplates {
+		return 0, fmt.Errorf("logix: %d templates: at most %d", n, maxModelTemplates)
+	}
+	if n := len(l.Tags); n > maxModelTags {
+		return 0, fmt.Errorf("logix: %d tags: at most %d", n, maxModelTags)
+	}
+	sizes := map[uint16]int64{logix.StringTemplate.ID: int64(logix.StringTemplate.Size)}
+	for _, t := range l.Templates {
+		for _, mb := range t.Members {
+			if strings.EqualFold(mb.Type, "BOOL") && mb.Bit > 7 {
+				return 0, fmt.Errorf("template %s member %s: bit %d of a BOOL: 0 to 7 (the bit in the octet at offset)", t.Name, mb.Name, mb.Bit)
+			}
+		}
+		if _, ok := sizes[t.ID]; !ok {
+			sizes[t.ID] = int64(t.Size)
+		}
+	}
+	total := int64(0)
+	for _, t := range l.Tags {
+		total += tagSize(t, sizes)
+		if total > maxModelData {
+			break
+		}
+	}
+	return total, nil
+}
+
+// tagSize returns the octets a tag holds in the tag database, at least as many as it
+// holds when that is more than maxModelData; 0 for a tag the database refuses anyway (an
+// unknown type or template, a dimension out of its range).
+func tagSize(t Tag, templates map[uint16]int64) int64 {
+	if len(t.Dims) > 3 {
+		return 0
+	}
+	n := int64(1)
+	for _, d := range t.Dims {
+		if d < 1 || d > 1<<20 {
+			return 0
+		}
+		n *= int64(d) // at most 2^60
+	}
+	var elem int64
+	switch upper := strings.ToUpper(t.Type); upper {
+	case "STRING":
+		elem = templates[logix.StringTemplate.ID]
+	case "STRUCT":
+		elem = templates[t.Template]
+	default:
+		dt, ok := cip.ParseDataType(upper)
+		if !ok {
+			return 0
+		}
+		if dt == cip.TypeBOOL && len(t.Dims) > 0 {
+			// A BOOL array is held as DWORDs, as in Logix.
+			return (n + 31) / 32 * 4
+		}
+		elem = int64(dt.Size())
+	}
+	if elem <= 0 {
+		return 0
+	}
+	if n > maxModelData {
+		return n // every element holds at least one octet
+	}
+	return n * elem // at most 2^26 * 2^32
 }
 
 // EchoPairs returns, for each output assembly, the input assembly of the same size with

@@ -5,6 +5,7 @@ package cmd
 import (
 	"bytes"
 	"context"
+	"encoding/hex"
 	"strings"
 	"testing"
 )
@@ -117,4 +118,66 @@ func TestIOTimeout(t *testing.T) {
 	if code := <-done2; code != 0 {
 		t.Errorf("interrupted io: exit %d\n%s", code, err2.String())
 	}
+}
+
+// forward-open, forward-close and io send the same connection path for the same flags:
+// the configuration instance is in it also when --config is 0 (instance 0), so a
+// forward-open test says what io will get.
+func TestForwardOpenSendsThePathOfIO(t *testing.T) {
+	f := startFixture(t)
+	const want = "[class 0x04] [instance 0] [point 152] [point 100]"
+	r := f.run(t, "io", "ADDR", "--output", "152", "--input", "100", "--output-size", "0", "--input-size", "32",
+		"--rpi", "10ms", "--timeout-multiplier", "7", "--io-address", "127.0.0.1:0", "--count", "1").want(t, 0).errHas(t, "path "+want+"\n")
+
+	conn := f.run(t, "forward-open", "ADDR", "--output", "152", "--input", "100", "--input-size", "32", "--rpi", "1s",
+		"--timeout-multiplier", "7", "--keep", "--connection-serial", "78", "--originator-serial", "4321", "--format", "json").
+		want(t, 0).json(t)["connection"].(map[string]any)
+	if conn["path"] != want {
+		t.Errorf("forward-open path %v, io path %s", conn["path"], r.stderr)
+	}
+	m := f.run(t, "forward-close", "ADDR", "--connection-serial", "78", "--originator-serial", "4321",
+		"--output", "152", "--input", "100", "--format", "json").want(t, 0).json(t)
+	if m["path"] != want {
+		t.Errorf("forward-close path %v, want %s", m["path"], want)
+	}
+	if n := len(f.srv.Connections()); n != 0 {
+		t.Errorf("%d connections left open", n)
+	}
+}
+
+// --config-data is written to the configuration assembly: forward-open and io send it only
+// with --yes. Without it they exit 2 (confirmation_required) before any connection.
+func TestConfigDataNeedsYes(t *testing.T) {
+	f := startFixture(t)
+	cfg := f.srv.Assembly(151)
+	zeros := strings.Repeat("00", 10)
+	open := []string{"forward-open", "ADDR", "--config", "151", "--output", "152", "--input", "100", "--input-size", "32", "--rpi", "100ms",
+		"--config-data", "0102030405060708090a"}
+	io := []string{"io", "ADDR", "--config", "151", "--output", "152", "--input", "100", "--output-size", "0", "--input-size", "32",
+		"--rpi", "10ms", "--timeout-multiplier", "7", "--io-address", "127.0.0.1:0", "--count", "1", "--config-data", "a1a2a3a4a5a6a7a8a9aa"}
+
+	for _, args := range [][]string{open, io} {
+		connects := f.metrics.connects.Load()
+		r := f.run(t, append(args, "--format", "json")...).want(t, 2)
+		if kind, code := r.errorCode(t); kind != "usage" || code != "confirmation_required" || !strings.Contains(r.stdout, "--config-data changes the target") {
+			t.Errorf("%s without --yes: %s", args[0], r.stdout)
+		}
+		if n := f.metrics.connects.Load() - connects; n != 0 || hex.EncodeToString(cfg.Data()) != zeros {
+			t.Errorf("%s without --yes: %d connection(s), configuration %x", args[0], n, cfg.Data())
+		}
+	}
+
+	f.run(t, append(open, "--yes")...).want(t, 0).has(t, "closed again")
+	if got := hex.EncodeToString(cfg.Data()); got != "0102030405060708090a" {
+		t.Errorf("forward-open --yes: configuration %s", got)
+	}
+	f.run(t, append(io, "--yes")...).want(t, 0)
+	if got := hex.EncodeToString(cfg.Data()); got != "a1a2a3a4a5a6a7a8a9aa" {
+		t.Errorf("io --yes: configuration %s", got)
+	}
+	// Without --config-data nothing changes: no --yes needed, and --yes is harmless.
+	noData := open[: len(open)-2 : len(open)-2]
+	f.run(t, noData...).want(t, 0)
+	f.run(t, append(noData, "--yes")...).want(t, 0)
+	run(t, "forward-open", "--help").want(t, 0).has(t, "--yes", "needs --yes")
 }

@@ -60,7 +60,7 @@ func statusText(flags string, ext uint8) string {
 // rows renders the identity as ATTRIBUTE/VALUE table rows.
 func (id Identity) rows(prefix string) [][]string {
 	rows := [][]string{
-		{prefix + "product_name", id.ProductName},
+		{prefix + "product_name", printable(id.ProductName)},
 		{prefix + "vendor", fmt.Sprintf("%d %s", id.VendorID, id.VendorName)},
 		{prefix + "device_type", fmt.Sprintf("%d %s", id.DeviceType, id.DeviceTypeName)},
 		{prefix + "product_code", strconv.Itoa(int(id.ProductCode))},
@@ -163,7 +163,7 @@ func (r *StatusResult) TableRows() [][]string {
 		state = r.Identity.StateName
 	}
 	return [][]string{{r.Target, strconv.FormatBool(r.Healthy), state, fmt.Sprintf("0x%04X", r.Identity.Status),
-		r.Identity.ProductName, strconv.Itoa(int(r.Identity.VendorID)), r.Identity.Revision, fmt.Sprintf("%.1f", r.RTTMs)}}
+		printable(r.Identity.ProductName), strconv.Itoa(int(r.Identity.VendorID)), r.Identity.Revision, fmt.Sprintf("%.1f", r.RTTMs)}}
 }
 
 // Device is a device that answered discover.
@@ -208,7 +208,7 @@ func (r *DiscoverResult) TableRows() [][]string {
 		if id.State != nil {
 			state = id.StateName
 		}
-		rows = append(rows, []string{d.Address, id.ProductName, fmt.Sprintf("%d %s", id.VendorID, id.VendorName), id.DeviceTypeName,
+		rows = append(rows, []string{d.Address, printable(id.ProductName), fmt.Sprintf("%d %s", id.VendorID, id.VendorName), id.DeviceTypeName,
 			strconv.Itoa(int(id.ProductCode)), id.Revision, fmt.Sprintf("0x%08X", id.SerialNumber), state})
 	}
 	return rows
@@ -237,7 +237,7 @@ func (r *ServicesResult) MarshalTextOutput() (string, error) {
 	var b strings.Builder
 	_, _ = fmt.Fprintf(&b, "ListServices of %s: %d service(s)\n", r.Target, r.Count)
 	for _, s := range r.Services {
-		_, _ = fmt.Fprintf(&b, "  %-16s version %d  capabilities 0x%04X  tcp=%t udp=%t\n", s.Name, s.Version, s.Capabilities, s.TCP, s.UDP)
+		_, _ = fmt.Fprintf(&b, "  %-16s version %d  capabilities 0x%04X  tcp=%t udp=%t\n", printable(s.Name), s.Version, s.Capabilities, s.TCP, s.UDP)
 	}
 	return b.String(), nil
 }
@@ -251,7 +251,7 @@ func (r *ServicesResult) TableHeaders() []string {
 func (r *ServicesResult) TableRows() [][]string {
 	rows := make([][]string, 0, len(r.Services))
 	for _, s := range r.Services {
-		rows = append(rows, []string{s.Name, strconv.Itoa(int(s.Version)), fmt.Sprintf("0x%04X", s.Capabilities), strconv.FormatBool(s.TCP), strconv.FormatBool(s.UDP)})
+		rows = append(rows, []string{printable(s.Name), strconv.Itoa(int(s.Version)), fmt.Sprintf("0x%04X", s.Capabilities), strconv.FormatBool(s.TCP), strconv.FormatBool(s.UDP)})
 	}
 	return rows
 }

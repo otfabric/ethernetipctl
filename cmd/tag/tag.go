@@ -112,8 +112,9 @@ nothing is sent and the exit code is 2.
 		Args: cobra.ExactArgs(2),
 	}
 	cfg := config.TagWriteConfig{}
-	runner.RegisterCommandCfg(cmd, &cfg, func(c *cobra.Command) { _ = cli.RegisterEnumFlagCompletion(c, "type", eip.TagTypes) })
+	runner.RegisterCommandCfg(cmd, &cfg, func(c *cobra.Command) { _ = cli.RegisterEnumFlagCompletion(c, "type", eip.TagTypes) }, cli.RouteFromFlagOnly)
 	cmd.RunE = func(cmd *cobra.Command, args []string) error {
+		cli.NoteEnvRouteNotUsed(cmd)
 		e := device.Env(cmd, g)
 		return device.Formatted(cmd, g, func() error { _, _, _, err := eip.CheckTagWrite(args[1], cfg); return err },
 			func(ctx context.Context) (any, error) { return e.TagWrite(ctx, args[0], args[1], cfg) })

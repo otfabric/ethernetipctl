@@ -4,7 +4,9 @@ package config
 
 import (
 	"fmt"
+	"math"
 	"reflect"
+	"strconv"
 	"time"
 
 	"github.com/spf13/cobra"
@@ -12,6 +14,26 @@ import (
 )
 
 var durationType = reflect.TypeFor[time.Duration]()
+
+// intFlag is an int flag that reads its value in 64 bits and keeps it within
+// the range of int. pflag's own int flag keeps the low 32 bits of a value on a
+// platform where int has 32 bits, so 4294967296 would become 0 there. Kept
+// within range, a value beyond int is refused by the range check of its field,
+// as on a 64-bit platform.
+type intFlag int
+
+func (f *intFlag) Set(s string) error {
+	v, err := strconv.ParseInt(s, 0, 64)
+	if err != nil {
+		return err
+	}
+	*f = intFlag(max(min(v, math.MaxInt), math.MinInt))
+	return nil
+}
+
+func (f *intFlag) String() string { return strconv.Itoa(int(*f)) }
+
+func (f *intFlag) Type() string { return "int" }
 
 // RegisterFlags binds cobra flags to tagged fields on cfg (pointer to struct).
 // Numeric and bool fields use reflect.Value.Addr().Interface().(*T) with the matching
@@ -67,7 +89,7 @@ func RegisterFlagSet(fs *pflag.FlagSet, cfg any) {
 		case reflect.Uint:
 			fs.UintVar(fv.Addr().Interface().(*uint), flagName, uint(fv.Uint()), desc)
 		case reflect.Int:
-			fs.IntVar(fv.Addr().Interface().(*int), flagName, int(fv.Int()), desc)
+			fs.Var((*intFlag)(fv.Addr().Interface().(*int)), flagName, desc)
 		case reflect.Int8:
 			p := fv.Addr().Interface().(*int8)
 			fs.Int8Var(p, flagName, *p, desc)

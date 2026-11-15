@@ -225,7 +225,8 @@ func (c Check) detailText() string {
 	return DetailText(c.Detail)
 }
 
-// DetailText renders a map as key=value pairs in key order.
+// DetailText renders a map as key=value pairs in key order; what does not print (a
+// device's product or host name may hold anything) is escaped.
 func DetailText(m map[string]any) string {
 	keys := make([]string, 0, len(m))
 	for k := range m {
@@ -236,7 +237,7 @@ func DetailText(m map[string]any) string {
 	for _, k := range keys {
 		parts = append(parts, fmt.Sprintf("%s=%v", k, m[k]))
 	}
-	return strings.Join(parts, " ")
+	return printable(strings.Join(parts, " "))
 }
 
 // TableHeaders implements format.TableMarshaler.

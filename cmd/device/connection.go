@@ -41,17 +41,21 @@ with --hold. A Class 3 connection ends with its session.`,
 	return cmd
 }
 
-const ioPathHelp = `The connection path names the assemblies: --config (the configuration instance; 0 leaves
-it out), --output (the O->T connection point: the output assembly, or a heartbeat point for
-input-only and listen-only connections) and --input (the T->O point: the input assembly).
+const ioPathHelp = `The connection path names the assemblies: --config (the configuration instance, sent as
+instance 0 when it is 0), --output (the O->T connection point: the output assembly, or a
+heartbeat point for input-only and listen-only connections) and --input (the T->O point:
+the input assembly).
 --output-size and --input-size are the data sizes without sequence count and run/idle
 header; the connection sizes of Forward_Open add them (O->T carries the 32-bit run/idle
 header, T->O is modeless; an output size of 0 is a heartbeat). --rpi is the requested
-packet interval of both directions.`
+packet interval of both directions.
+--config-data is configuration data in the connection path: the target writes it to the
+configuration assembly when it accepts the connection. THAT CHANGES THE DEVICE, so it
+needs --yes: without it nothing is sent and the exit code is 2.`
 
 func newForwardOpenCmd(g *config.Global) *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "forward-open " + hostUse + " --output N --input N --rpi D [--config N] [--output-size N] [--input-size N]",
+		Use:   "forward-open " + hostUse + " --output N --input N --rpi D [--config N] [--output-size N] [--input-size N] [--config-data HEX --yes]",
 		Short: "Test a Forward_Open of an I/O connection, then close it again",
 		Long: `Send a Forward_Open of a Class 1 cyclic I/O connection and show the target's answer: the
 connection IDs, the actual packet intervals and the connection triad. No I/O data is
@@ -117,7 +121,9 @@ func newIOCmd(g *config.Global) *cobra.Command {
 (T->O) sample as it arrives: one line of text, one JSON object per line (JSON Lines) or one
 table row. It runs until interrupted (Ctrl-C), --duration, --count samples, or the end of
 the connection (a timeout of the target exits 5). Connection state and a summary go to
-stderr.
+stderr. Up to 1024 samples, with at most 4 MiB of data as hex, wait for stdout: when stdout
+is slower than the target, the oldest are dropped, the summary counts them and "seq" shows
+the gap. After Ctrl-C only the samples already waiting are written.
 
 ` + ioPathHelp + `
 
@@ -125,7 +131,7 @@ A connection with output data (--output-size above 0) WRITES THE OUTPUTS OF THE 
 every interval: zeros, or --output-data. It needs --yes; without it nothing is sent and the
 exit code is 2. --idle sends the output in idle mode, which most devices answer by holding
 their outputs in their idle state. An input-only connection (--output the heartbeat point,
---output-size 0) writes nothing and needs no --yes.
+--output-size 0) without --config-data writes nothing and needs no --yes.
 
 The I/O endpoint listens on UDP --io-address (default :2222, the port targets send to); a
 port other than 2222 is announced to the target in the Forward_Open.`,
