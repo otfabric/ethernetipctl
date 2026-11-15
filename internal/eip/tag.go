@@ -66,9 +66,11 @@ func typeName(v logix.Value) (string, *uint16) {
 	return v.Type.String(), nil
 }
 
-// valuesOf returns the elements of an atomic or STRING value.
+// valuesOf returns the elements of an atomic or STRING value. Every element has at least
+// one octet, so the data bounds the room the elements take, whatever count the value
+// declares.
 func valuesOf(v logix.Value) []any {
-	out := make([]any, 0, v.Count)
+	out := make([]any, 0, max(min(v.Count, len(v.Data)), 0))
 	for i := 0; i < v.Count; i++ {
 		var x any
 		var err error

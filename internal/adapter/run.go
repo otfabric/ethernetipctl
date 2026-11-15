@@ -94,18 +94,95 @@ func ListenAddress(listen string, port uint16) (string, error) {
 	return t.Addr(), nil
 }
 
-// emitter serializes the events of the server's goroutines.
+// eventQueue is the number of events that wait for the output; drainTimeout how long Run
+// waits at the end for the output to take the events still queued.
+const (
+	eventQueue   = 1024
+	drainTimeout = time.Second
+)
+
+// emitter passes the events of the server's goroutines, in order, to one goroutine that
+// calls log. emit never waits for log: the server's callbacks must not block. When the
+// queue is full an event is dropped and counted, and a "dropped" event with the count
+// takes its place in the order once the queue has room again.
 type emitter struct {
-	mu  sync.Mutex
-	log func(types.AdapterEvent)
+	log  func(types.AdapterEvent)
+	ch   chan types.AdapterEvent
+	done chan struct{}
+
+	mu      sync.Mutex
+	closed  bool
+	dropped uint64
+}
+
+// newEmitter starts the goroutine that writes the events.
+func newEmitter(log func(types.AdapterEvent)) *emitter {
+	e := &emitter{log: log, ch: make(chan types.AdapterEvent, eventQueue), done: make(chan struct{})}
+	go e.write()
+	return e
 }
 
 func (e *emitter) emit(ev types.AdapterEvent) {
-	ev.Timestamp = time.Now().UTC().Format("2006-01-02T15:04:05.000Z07:00")
+	ev.Timestamp = timestamp()
 	e.mu.Lock()
 	defer e.mu.Unlock()
-	e.log(ev)
+	if e.closed {
+		return
+	}
+	if e.dropped > 0 {
+		select {
+		case e.ch <- droppedEvent(e.dropped):
+			e.dropped = 0
+		default:
+			e.dropped++
+			return
+		}
+	}
+	select {
+	case e.ch <- ev:
+	default:
+		e.dropped++
+	}
 }
+
+// write calls log for every event, then for the count of the events dropped since the
+// last one queued.
+func (e *emitter) write() {
+	defer close(e.done)
+	for ev := range e.ch {
+		e.log(ev)
+	}
+	e.mu.Lock()
+	n := e.dropped
+	e.mu.Unlock()
+	if n > 0 {
+		e.log(droppedEvent(n))
+	}
+}
+
+// close stops taking events and waits up to wait for log to write those still queued;
+// when the output does not take them in time, the rest is left to the goroutine.
+func (e *emitter) close(wait time.Duration) {
+	e.mu.Lock()
+	if !e.closed {
+		e.closed = true
+		close(e.ch)
+	}
+	e.mu.Unlock()
+	t := time.NewTimer(wait)
+	defer t.Stop()
+	select {
+	case <-e.done:
+	case <-t.C:
+	}
+}
+
+func droppedEvent(n uint64) types.AdapterEvent {
+	return types.AdapterEvent{Timestamp: timestamp(), Event: "dropped",
+		Detail: strconv.FormatUint(n, 10) + " event(s) not written: the output did not keep up"}
+}
+
+func timestamp() string { return time.Now().UTC().Format("2006-01-02T15:04:05.000Z07:00") }
 
 // metrics turns the server's callbacks into events.
 type metrics struct {
@@ -220,8 +297,11 @@ func build(m *Model, cfg *config.AdapterConfig, logger ethernetip.Logger, e *emi
 	return srv, nil
 }
 
-// Run serves the adapter until ctx ends or --duration elapses. log receives every event;
-// it is called from one goroutine at a time.
+// Run serves the adapter until ctx ends or --duration elapses. log receives every event
+// from one goroutine of its own, through a queue of 1024 events: while log does not keep
+// up the server goes on serving, events beyond the queue are dropped, and a "dropped"
+// event counts them. At the end Run waits at most a second for log to take the events
+// still queued; log may be called after Run returned when it took longer.
 func Run(ctx context.Context, cfg *config.AdapterConfig, global *config.Global, logger ethernetip.Logger, log func(types.AdapterEvent)) error {
 	m, err := Resolve(cfg)
 	if err != nil {
@@ -231,7 +311,8 @@ func Run(ctx context.Context, cfg *config.AdapterConfig, global *config.Global, 
 	if err != nil {
 		return err
 	}
-	e := &emitter{log: log}
+	e := newEmitter(log)
+	defer e.close(drainTimeout)
 	srv, err := build(m, cfg, logger, e)
 	if err != nil {
 		return err

@@ -4,6 +4,7 @@ package cmd
 
 import (
 	"context"
+	"encoding/hex"
 	"errors"
 	"strconv"
 	"strings"
@@ -255,7 +256,7 @@ func TestSessionAndForwardOpen(t *testing.T) {
 
 	io := []string{"--config", "151", "--output", "150", "--input", "100", "--output-size", "32", "--input-size", "32", "--rpi", "10ms"}
 	f.run(t, append([]string{"forward-open", "ADDR"}, io...)...).want(t, 0).has(t, "Forward_Open to", "O->T 38 octets, T->O 34 octets", "closed again with Forward_Close")
-	f.run(t, append([]string{"forward-open", "ADDR", "--large", "--format", "table", "--config-data", "01020304050607080910"}, io...)...).want(t, 0).has(t, "Large_Forward_Open")
+	f.run(t, append([]string{"forward-open", "ADDR", "--large", "--format", "table", "--config-data", "01020304050607080910", "--yes"}, io...)...).want(t, 0).has(t, "Large_Forward_Open")
 	if n := len(f.srv.Connections()); n != 0 {
 		t.Fatalf("%d connections left open", n)
 	}
@@ -398,3 +399,89 @@ func TestErrorKinds(t *testing.T) {
 type failingWriter struct{}
 
 func (failingWriter) Write([]byte) (int, error) { return 0, errors.New("pipe closed") }
+
+// A command that changes the device takes its route only from --route: with
+// ETHERNETIPCTL_ROUTE set and no --route, the change goes to the host on the command line,
+// and one line on stderr says that the variable is not used. The reading commands go on
+// using it.
+func TestChangingCommandsTakeTheRouteOnlyFromTheFlag(t *testing.T) {
+	f := startFixture(t)
+	// The fixture has no port 2: a request that took this route would be refused (exit 6).
+	t.Setenv("ETHERNETIPCTL_ROUTE", "1/2")
+	const note = "ETHERNETIPCTL_ROUTE=1/2 is not used: a change takes its route only from --route\n"
+	data := strings.Repeat("07", 32)
+	for _, args := range [][]string{
+		{"reset", "ADDR", "--yes"},
+		{"reset", "ADDR", "--yes", "--format", "table"},
+		{"write", "ADDR", "@0xF5/1/8", "--type", "USINT", "--value", "5", "--yes"},
+		{"assembly", "write", "ADDR", "150", "--data", data, "--yes"},
+		{"tag", "write", "ADDR", "Count", "--type", "DINT", "--value", "7", "--yes"},
+	} {
+		t.Run(strings.Join(args, " "), func(t *testing.T) {
+			r := f.run(t, args...).want(t, 0)
+			if r.stderr != note || strings.Contains(r.stdout, "route") {
+				t.Errorf("stdout %q\nstderr %q, want %q", r.stdout, r.stderr, note)
+			}
+		})
+	}
+	if f.resets.Load() != 2 || hex.EncodeToString(f.out.Data()) != data {
+		t.Errorf("%d resets, output assembly %x", f.resets.Load(), f.out.Data())
+	}
+	f.run(t, "tag", "read", "ADDR", "Count", "--route", "1/0").want(t, 0).has(t, "[0] 7")
+	m := f.run(t, "reset", "ADDR", "--yes", "--format", "json").want(t, 0).json(t)
+	if _, ok := m["route"]; ok {
+		t.Errorf("JSON route %v", m["route"])
+	}
+	// Without --yes: the line, then the refusal; nothing is sent.
+	r := f.run(t, "reset", "ADDR").want(t, 2)
+	if !strings.HasPrefix(r.stderr, note) || f.resets.Load() != 3 {
+		t.Errorf("stderr %q, %d resets", r.stderr, f.resets.Load())
+	}
+	// A variable that is not a route does not stop a change that does not use it.
+	t.Setenv("ETHERNETIPCTL_ROUTE", "x")
+	f.run(t, "reset", "ADDR", "--yes").want(t, 0)
+	t.Setenv("ETHERNETIPCTL_ROUTE", "1/2")
+
+	// --route on the command line is the route: 1/0 reaches the fixture, 1/2 is refused.
+	for _, args := range [][]string{
+		{"reset", "ADDR", "--yes", "--route", "1/0"},
+		{"write", "ADDR", "@0xF5/1/8", "--type", "USINT", "--value", "5", "--yes", "--route", "1/0"},
+		{"assembly", "write", "ADDR", "150", "--data", data, "--yes", "--route", "1/0"},
+		{"tag", "write", "ADDR", "Count", "--type", "DINT", "--value", "8", "--yes", "--route", "1/0"},
+	} {
+		r := f.run(t, args...).want(t, 0).has(t, "route 1/0")
+		if r.stderr != "" {
+			t.Errorf("%v: stderr %q", args, r.stderr)
+		}
+		args[len(args)-1] = "1/2"
+		f.run(t, args...).want(t, 6)
+	}
+	if f.resets.Load() != 5 {
+		t.Errorf("%d resets, want 5", f.resets.Load())
+	}
+
+	// The reading commands take the variable, and their help names it; the changing
+	// commands' help says they do not.
+	t.Setenv("ETHERNETIPCTL_ROUTE", "1/0")
+	m = f.run(t, "read", "ADDR", "@1/1/7", "--format", "json").want(t, 0).json(t)
+	if m["route"] != "1/0" {
+		t.Errorf("read: route %v", m["route"])
+	}
+	f.run(t, "tag", "read", "ADDR", "Count").want(t, 0).has(t, "route 1/0")
+	run(t, "read", "--help").want(t, 0).has(t, "[env: ETHERNETIPCTL_ROUTE]")
+	for _, args := range [][]string{{"reset"}, {"write"}, {"assembly", "write"}, {"tag", "write"}} {
+		r := run(t, append(args, "--help")...).want(t, 0).has(t, "a change does not take ETHERNETIPCTL_ROUTE")
+		if strings.Contains(r.stdout, "[env: ETHERNETIPCTL_ROUTE]") || strings.Contains(r.stdout, `(default "1/0")`) {
+			t.Errorf("%v --help:\n%s", args, r.stdout)
+		}
+	}
+}
+
+// The help of diagnose names the exit code a failed check gives, the one TestDiagnose
+// sees: 1 (findings).
+func TestDiagnoseHelpNamesItsExitCode(t *testing.T) {
+	r := run(t, "diagnose", "--help").want(t, 0).has(t, "1 (findings) when one failed or was skipped")
+	if strings.Contains(r.stdout, "7 (partial)") {
+		t.Errorf("help names exit code 7:\n%s", r.stdout)
+	}
+}

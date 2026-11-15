@@ -33,20 +33,23 @@ EtherNet/IP and CIP as most devices implement them carry no authentication and n
 
 ### Commands That Change a Device
 
-These need `--yes`. Without it they validate the invocation, open no connection, send nothing and exit 3 (`confirmation_required`). `--yes` cannot be set from the environment, so that a variable left in a shell cannot turn a read into a write.
+These need `--yes`. Without it they validate the invocation, open no connection, send nothing and exit 2 (`confirmation_required`). `--yes` cannot be set from the environment, so that a variable left in a shell cannot turn a read into a write.
 
 - **`write`** sets an attribute. Attributes of the TCP/IP Interface object change the device's IP configuration (and can make it unreachable); attributes of application objects change what the device does
 - **`assembly write`** writes assembly data: on an output assembly, the device's outputs
 - **`reset`** restarts the device; `--type 1` also returns it to its factory defaults, its IP configuration included
 - **`tag write`** changes a Logix controller's data, which its program acts on; a bit name (`Flags.3`) changes one bit with Read-Modify-Write
 - **`io` with output data** (`--output-size` above 0) sends output data at every RPI: zeros until `--output-data` is applied (go-ethernetip's scanner starts the exchange before the application can set its first output), in run mode unless `--idle`. On real equipment this drives outputs. Watch inputs with an input-only connection instead (`--output` the heartbeat point, `--output-size 0`), which writes nothing
+- **`forward-open` and `io` with `--config-data`** send the data in the connection path, and the device writes it to its configuration assembly (`--config`) when it accepts the connection. Without `--config-data` nothing is written to the configuration assembly
+
+These commands take a route only from `--route`, never from `ETHERNETIPCTL_ROUTE`, so that a route left in a shell cannot send a change to another device. With the variable set and no `--route`, they send the change to the host on the command line and say on stderr that the variable is not used; `reset` names its route in its output, as the other commands do. The reading commands go on taking the variable.
 
 Requests are never repeated: after a timeout (exit 5) a write may or may not have been executed. Read back before writing again.
 
 ### Commands That Are Read-Only but Not Invisible
 
-- **`forward-open`** opens a connection (and closes it again unless `--keep`). An exclusive-owner connection to an output assembly takes ownership of it while open: a PLC that owns it gets its own Forward_Open refused, or the device refuses yours (0x0106 ownership conflict). With `--keep` the connection stays until the device times it out or `forward-close` closes it
-- **`io`** without output data opens an input-only or listen-only connection, which counts against the device's connection limit
+- **`forward-open`** without `--config-data` opens a connection (and closes it again unless `--keep`). An exclusive-owner connection to an output assembly takes ownership of it while open: a PLC that owns it gets its own Forward_Open refused, or the device refuses yours (0x0106 ownership conflict). With `--keep` the connection stays until the device times it out or `forward-close` closes it
+- **`io`** without output data and without `--config-data` opens an input-only or listen-only connection, which counts against the device's connection limit
 - **`session --hold`** keeps a session, and with `--connected` a Class 3 connection, for as long as asked
 - **`discover`** sends one ListIdentity datagram. To a broadcast address it reaches every device of the segment, and each answers. It never scans: prefixes, ranges and lists are refused everywhere
 - Every command opens a TCP session, which a device may log or count
@@ -55,11 +58,14 @@ Requests are never repeated: after a timeout (exit 5) a write may or may not hav
 
 - `adapter` listens on **all network interfaces** by default and accepts **any client**. Use `--listen 127.0.0.1` (or one interface address) for local tests, or a host firewall
 - The adapter accepts every write, I/O connection and Reset it is sent; Reset does nothing but log an event
-- A model file is read with the permissions of the user running the adapter
+- A model file is read with the permissions of the user running the adapter. A model holds at most 4096 assemblies, 4096 tags and 4096 templates, and 64 MiB of assembly and tag data together; a larger one is refused (exit 3) before anything is built
+- Up to 1024 events wait for stdout. While stdout does not keep up, the adapter goes on serving, the events beyond those are left out, and a `dropped` event counts them
 
 ### Output
 
 - Command output and adapter event logs contain process data, addresses and identities, which may be sensitive operational data. Be careful when storing or sharing them
+- Text and table output write what a device sends (names, product names, string values) with the characters that do not print escaped (`\x1b`, `\r`); JSON escapes them as JSON does
+- `io` keeps up to 1024 samples (4 MiB of data as hex) waiting for stdout; when stdout is slower, the oldest are dropped and the summary counts them
 - `--debug` prints go-ethernetip's protocol log to stderr
 
 ### Privileges

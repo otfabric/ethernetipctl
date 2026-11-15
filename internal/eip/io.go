@@ -49,12 +49,29 @@ func CheckIO(cfg config.IOConfig) ([]byte, error) {
 			return nil, err
 		}
 	}
+	if cfg.ConfigData != "" {
+		// The target writes the configuration data to its configuration assembly.
+		if err := confirm(cfg.Yes, "an I/O connection with --config-data"); err != nil {
+			return nil, err
+		}
+	}
 	return out, nil
 }
 
 // maxScannerSize is the largest I/O data size go-ethernetip's scanner
 // accepts.
 const maxScannerSize = 65000
+
+// The most input samples, and octets of sample data as hex, that wait for the output:
+// when the output is slower than the target, the oldest samples are dropped and counted.
+// The latest sample is always kept.
+var (
+	maxQueuedSamples = 1024
+	maxQueuedData    = 4 << 20
+)
+
+// sampleQueued is called with the length of the queue after each sample; tests set it.
+var sampleQueued = func(int) {}
 
 // sampler turns the inputs of an I/O connection into records, from the endpoint's
 // goroutine to the command's.
@@ -65,6 +82,8 @@ type sampler struct {
 	lastRun bool
 	seen    bool
 	queue   []types.IOSample
+	data    int // octets of Data in queue
+	dropped uint64
 	seq     uint64
 	notify  chan struct{}
 }
@@ -77,10 +96,19 @@ func (s *sampler) input(data []byte, run bool) {
 	}
 	s.seen, s.lastRun, s.last = true, run, append(s.last[:0], data...)
 	s.seq++
-	s.queue = append(s.queue, types.IOSample{
+	smp := types.IOSample{
 		ReceivedAt: time.Now().UTC().Format("2006-01-02T15:04:05.000Z07:00"),
 		Seq:        s.seq, Run: run, Size: len(data), Data: Hex(data),
-	})
+	}
+	s.queue = append(s.queue, smp)
+	s.data += len(smp.Data)
+	for len(s.queue) > 1 && (len(s.queue) > maxQueuedSamples || s.data > maxQueuedData) {
+		s.data -= len(s.queue[0].Data)
+		s.queue[0] = types.IOSample{}
+		s.queue = s.queue[1:]
+		s.dropped++
+	}
+	sampleQueued(len(s.queue))
 	select {
 	case s.notify <- struct{}{}:
 	default:
@@ -91,8 +119,15 @@ func (s *sampler) take() []types.IOSample {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	q := s.queue
-	s.queue = nil
+	s.queue, s.data = nil, 0
 	return q
+}
+
+// droppedSamples returns the number of samples dropped because the output was slower.
+func (s *sampler) droppedSamples() uint64 {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.dropped
 }
 
 // IO runs `io`: opens an I/O connection with the scanner and writes every input sample
@@ -165,37 +200,49 @@ func (e Env) IO(ctx context.Context, host string, cfg config.IOConfig, write fun
 		}
 		return false, nil
 	}
+	// stopped ends the stream at a signal: the samples queued until then are written, and
+	// no later ones.
+	stopped := func() (int, error) {
+		_, err := flush()
+		e.ioSummary(stderr, ioc, smp, written)
+		return errs.ExitOK, err
+	}
 	for {
 		select {
 		case <-smp.notify:
+			if ctx.Err() != nil {
+				return stopped()
+			}
 			if done, err := flush(); done || err != nil {
-				e.ioSummary(stderr, ioc, written)
+				e.ioSummary(stderr, ioc, smp, written)
 				return errs.ExitOK, err
 			}
 		case <-ioc.Done():
 			if _, err := flush(); err != nil {
 				return 0, err
 			}
-			e.ioSummary(stderr, ioc, written)
+			e.ioSummary(stderr, ioc, smp, written)
 			if err := ioc.Err(); err != nil {
 				return 0, WrapError(err)
 			}
 			return errs.ExitOK, nil
 		case <-stop:
 			_, err := flush()
-			e.ioSummary(stderr, ioc, written)
+			e.ioSummary(stderr, ioc, smp, written)
 			return errs.ExitOK, err
 		case <-ctx.Done():
-			_, err := flush()
-			e.ioSummary(stderr, ioc, written)
-			return errs.ExitOK, err
+			return stopped()
 		}
 	}
 }
 
-func (e Env) ioSummary(w io.Writer, ioc *scanner.IO, written uint64) {
+func (e Env) ioSummary(w io.Writer, ioc *scanner.IO, smp *sampler, written uint64) {
 	st := ioc.Stats()
 	state := ioc.State()
-	_, _ = fmt.Fprintf(w, "%d sample(s) written; sent %d, received %d, dropped %d, duplicates %d; state %s\n",
+	_, _ = fmt.Fprintf(w, "%d sample(s) written; sent %d, received %d, dropped %d, duplicates %d; state %s",
 		written, st.Sent, st.Received, st.Dropped, st.Duplicates, state)
+	if n := smp.droppedSamples(); n > 0 {
+		_, _ = fmt.Fprintf(w, "; %d sample(s) not written: the output did not keep up", n)
+	}
+	_, _ = fmt.Fprintln(w)
 }

@@ -87,15 +87,19 @@ An emulated Rockwell Logix tag database (vendor specific, not CIP) for the `tag`
 |-------|---------|
 | `program_name` | The project name the Program Name object reports (default `OTFabric`) |
 | `templates` | Structure (UDT) definitions: `id` (1 to 0x0FFF), `name`, `handle` (unique), `size` in octets, `members` |
-| `templates[].members` | `name`, `type` (an atomic type, `STRING`, or `struct` with `template`), `array` (the length of an array member), `bit` (the bit of a BOOL member in the octet at `offset`), `offset` |
+| `templates[].members` | `name`, `type` (an atomic type, `STRING`, or `struct` with `template`), `array` (the length of an array member), `bit` (the bit of a BOOL member in the octet at `offset`: 0 to 7), `offset` |
 | `tags` | `name` (controller scope, or `Program:<name>.<tag>`), `type` (`BOOL`, `SINT`, `INT`, `DINT`, `LINT`, `USINT`, `UINT`, `UDINT`, `ULINT`, `REAL`, `LREAL`, `BYTE`, `WORD`, `DWORD`, `LWORD`, `STRING`, or `struct` with `template`), `dims` (up to three array dimensions), `value` |
 | `tags[].value` | The initial value: one value per element, comma-separated (decimal or 0x-prefixed hex for integers); for `STRING` the text, several separated by `\|` for an array. A structure tag starts zeroed |
 
 A Logix BOOL member is a bit of a hidden host member, as the controllers lay them out: declare the host (`SINT` at the same offset) as in the example. Every write of a tag by an originator is logged as a `tag-write` event.
 
+### Bounds
+
+Besides the bounds of each field (an assembly of at most 65000 octets; a tag of at most 16 MiB, in up to three dimensions of 1 to 1048576 each), a model holds at most 4096 assemblies, 4096 tags and 4096 templates, and at most 64 MiB of data in its assemblies and tags together (a `STRING` counts 88 octets, a BOOL array the DWORDs that hold it, a structure its template's `size`). A model above them is refused as `invalid_config` (exit 3) before the adapter starts.
+
 ## Events
 
-The adapter writes one record per event to stdout (`--format text`, `json` for JSON Lines, or `table`): `listening` (with the TCP, UDP and I/O addresses), `connected` and `disconnected` (TCP sessions), `request` (every explicit request and its status, with `--requests`), `connection-opened` and `connection-closed` (CIP connections, with their IDs, triad and path), `assembly-write`, `tag-write`, `reset`, `stopping`. See [json-output.md](json-output.md#streams).
+The adapter writes one record per event to stdout (`--format text`, `json` for JSON Lines, or `table`): `listening` (with the TCP, UDP and I/O addresses), `connected` and `disconnected` (TCP sessions), `request` (every explicit request and its status, with `--requests`), `connection-opened` and `connection-closed` (CIP connections, with their IDs, triad and path), `assembly-write`, `tag-write`, `reset`, `stopping`. Up to 1024 events wait for stdout; while stdout does not keep up the adapter goes on serving, the events beyond those are left out, and a `dropped` event gives their number once there is room again (or at the end). See [json-output.md](json-output.md#streams).
 
 ## Listening
 

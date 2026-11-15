@@ -20,7 +20,7 @@ type TagField struct {
 func fieldLines(b *strings.Builder, fs []TagField, indent string) {
 	for _, f := range fs {
 		if len(f.Fields) > 0 {
-			_, _ = fmt.Fprintf(b, "%s%s (%s):\n", indent, f.Name, f.Type)
+			_, _ = fmt.Fprintf(b, "%s%s (%s):\n", indent, printable(f.Name), f.Type)
 			fieldLines(b, f.Fields, indent+"  ")
 			continue
 		}
@@ -28,7 +28,7 @@ func fieldLines(b *strings.Builder, fs []TagField, indent string) {
 		if f.Value == nil {
 			v = hexDump(f.Data)
 		}
-		_, _ = fmt.Fprintf(b, "%s%-20s %-8s %s\n", indent, f.Name, f.Type, v)
+		_, _ = fmt.Fprintf(b, "%s%-20s %-8s %s\n", indent, printable(f.Name), f.Type, v)
 	}
 }
 
@@ -57,7 +57,7 @@ func (r *TagReadResult) MarshalTextOutput() (string, error) {
 	t := fmt.Sprintf("%s[%d]", r.Type, r.Count)
 	switch {
 	case r.Struct != "" && r.Handle != nil:
-		t = fmt.Sprintf("%s[%d] (handle 0x%04X)", r.Struct, r.Count, *r.Handle)
+		t = fmt.Sprintf("%s[%d] (handle 0x%04X)", printable(r.Struct), r.Count, *r.Handle)
 	case r.Handle != nil:
 		t = fmt.Sprintf("%s handle 0x%04X[%d]", r.Type, *r.Handle, r.Count)
 	}
@@ -94,14 +94,14 @@ func (r *TagReadResult) TableRows() [][]string {
 	walk = func(prefix string, fs []TagField) {
 		for _, f := range fs {
 			if len(f.Fields) > 0 {
-				walk(prefix+f.Name+".", f.Fields)
+				walk(prefix+printable(f.Name)+".", f.Fields)
 				continue
 			}
-			v := fmt.Sprint(f.Value)
+			v := printable(fmt.Sprint(f.Value))
 			if f.Value == nil {
 				v = hexDump(f.Data)
 			}
-			rows = append(rows, []string{r.Tag + "." + prefix + f.Name, "-", f.Type, v})
+			rows = append(rows, []string{r.Tag + "." + prefix + printable(f.Name), "-", f.Type, v})
 		}
 	}
 	walk("", r.Fields)
@@ -190,7 +190,7 @@ func (r *TagListResult) MarshalTextOutput() (string, error) {
 	}
 	b.WriteString("\n")
 	for _, t := range r.Tags {
-		_, _ = fmt.Fprintf(&b, "  %-32s %-16s instance %d\n", t.Name+t.dimsText(), t.Type, t.Instance)
+		_, _ = fmt.Fprintf(&b, "  %-32s %-16s instance %d\n", printable(t.Name)+t.dimsText(), printable(t.Type), t.Instance)
 	}
 	return b.String(), nil
 }
@@ -202,7 +202,7 @@ func (r *TagListResult) TableHeaders() []string { return []string{"NAME", "TYPE"
 func (r *TagListResult) TableRows() [][]string {
 	rows := make([][]string, 0, len(r.Tags))
 	for _, t := range r.Tags {
-		rows = append(rows, []string{t.Name, t.Type, orDash(t.dimsText()), strconv.FormatUint(uint64(t.Instance), 10)})
+		rows = append(rows, []string{printable(t.Name), printable(t.Type), orDash(t.dimsText()), strconv.FormatUint(uint64(t.Instance), 10)})
 	}
 	return rows
 }
@@ -230,13 +230,13 @@ type TemplateResult struct {
 // MarshalTextOutput implements format.TextMarshaler.
 func (r *TemplateResult) MarshalTextOutput() (string, error) {
 	var b strings.Builder
-	_, _ = fmt.Fprintf(&b, "Template 0x%04X %s at %s: handle 0x%04X, %d octets, %d members\n", r.ID, r.Name, r.via(), r.Handle, r.Size, len(r.Members))
+	_, _ = fmt.Fprintf(&b, "Template 0x%04X %s at %s: handle 0x%04X, %d octets, %d members\n", r.ID, printable(r.Name), r.via(), r.Handle, r.Size, len(r.Members))
 	for _, m := range r.Members {
 		hidden := ""
 		if m.Hidden {
 			hidden = " (hidden)"
 		}
-		_, _ = fmt.Fprintf(&b, "  %-24s %-16s offset %-4d info %d%s\n", m.Name, m.Type, m.Offset, m.Info, hidden)
+		_, _ = fmt.Fprintf(&b, "  %-24s %-16s offset %-4d info %d%s\n", printable(m.Name), m.Type, m.Offset, m.Info, hidden)
 	}
 	return b.String(), nil
 }
@@ -250,7 +250,7 @@ func (r *TemplateResult) TableHeaders() []string {
 func (r *TemplateResult) TableRows() [][]string {
 	rows := make([][]string, 0, len(r.Members))
 	for _, m := range r.Members {
-		rows = append(rows, []string{m.Name, m.Type, strconv.FormatUint(uint64(m.Offset), 10), strconv.Itoa(int(m.Info)), strconv.FormatBool(m.Hidden)})
+		rows = append(rows, []string{printable(m.Name), m.Type, strconv.FormatUint(uint64(m.Offset), 10), strconv.Itoa(int(m.Info)), strconv.FormatBool(m.Hidden)})
 	}
 	return rows
 }
@@ -260,8 +260,9 @@ type AdapterEvent struct {
 	// Timestamp is when the event happened (RFC 3339, UTC, milliseconds).
 	Timestamp string `json:"timestamp"`
 	// Event is "listening", "connected", "disconnected", "request",
-	// "connection-opened", "connection-closed", "assembly-write", "tag-write", "reset" or
-	// "stopping".
+	// "connection-opened", "connection-closed", "assembly-write", "tag-write", "reset",
+	// "stopping", or "dropped" (events left out while stdout did not keep up; Detail
+	// gives their number).
 	Event    string      `json:"event"`
 	Remote   string      `json:"remote,omitempty"`
 	Address  string      `json:"address,omitempty"`

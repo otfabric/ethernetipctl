@@ -1,5 +1,38 @@
 # ethernetipctl Releases
 
+## v0.9.0
+
+**Date:** 2026-11-15
+**Previous release:** v0.8.1
+
+## Summary
+
+Two changes for scripts that change devices, under Breaking: `--config-data` needs `--yes`, and `write`, `reset`, `assembly write` and `tag write` take a route only from `--route`. Besides them: bounds on the events and samples that wait for stdout and on the adapter model, device strings escaped in text and table output, and the connection path of `forward-open` and `forward-close` as `io` sends it. Built on go-ethernetip v0.8.1 (was v0.8.0). No exit code is added or redefined. `forward-open` gains `--yes`; the JSON output gains the adapter's `dropped` event, and with `--config 0` the `path` of `forward-open` and `forward-close` names `[instance 0]`.
+
+## Changes
+
+### Breaking
+
+- **forward-open, io: `--config-data` needs `--yes`.** The target writes the configuration data to its configuration assembly when it accepts the connection, so it is a change like the others. `forward-open` has a new `--yes` flag, with no environment variable, as for the other commands; `io` asks for `--yes` when `--config-data` is given, as it does for output data. What a script sees now: without `--yes`, both exit 2 with kind `usage` and code `confirmation_required` (`forward-open with --config-data changes the target: add --yes to confirm (nothing was sent)`, `an I/O connection with --config-data changes the target: …`) before any connection is opened, where they used to open the connection and write the configuration. To keep the old handling, add `--yes` to the invocations that pass `--config-data`. Without `--config-data` nothing changes.
+- **write, reset, assembly write, tag write: the route comes only from `--route`.** `ETHERNETIPCTL_ROUTE` no longer applies to these four; the reading commands keep taking it. What a script sees now: with the variable set and no `--route`, the change goes to the host on the command line, without a route, and stderr has one line, `ETHERNETIPCTL_ROUTE=<route> is not used: a change takes its route only from --route`; the output and the JSON name no route. To keep the old handling, pass the route on the command line: `--route "$ETHERNETIPCTL_ROUTE"`. Their help no longer names the variable for `--route`.
+
+### Other changes
+
+- **forward-open, forward-close**: the connection path always names the configuration instance, `[instance 0]` when `--config` is 0, as the `--config` description says and as `io` (go-ethernetip's scanner) sends it, so the three commands send the same path for the same flags. With `--config 0` the text and the JSON `connection.path` (forward-open) and `path` (forward-close) show `[instance 0]`, and `--config-data` has one word less of room, as with `io`.
+- **adapter**: events reach stdout through a queue of 1024. While stdout does not keep up, the adapter goes on serving, the events beyond the queue are left out, and a new `dropped` event counts them (JSON `"event": "dropped"`, `detail` with the number). When it stops, the adapter waits at most a second for stdout.
+- **adapter**: a model holds at most 4096 assemblies, 4096 tags and 4096 templates, and 64 MiB of assembly and tag data together; a larger one is refused as `invalid_config` (exit 3) before the adapter starts. The `bit` of a BOOL member is 0 to 7, and a larger one is refused as `invalid_config`; it was taken modulo 8.
+- **io**: up to 1024 samples, with at most 4 MiB of data as hex, wait for stdout. When stdout is slower than the device, the oldest are dropped, the summary on stderr counts them (`; N sample(s) not written: the output did not keep up`) and `seq` shows the gap. After Ctrl-C only the samples already waiting are written.
+- **text and table output**: names and strings a device sends (product and service names, tag, template and member names, the values of decoded structures, the details of `diagnose`) are written with the characters that do not print escaped as Go writes them (`\x1b`, `\r`, `\u2028`, `\xff`). JSON is unchanged.
+- **reset**: text and table output name the route, as the other messaging commands do (`Reset type 0 (power cycle) of 192.168.1.10:44818 route 1/0 accepted in 1.2 ms`).
+- **tag read, tag decode**: the room taken for the values of a reply follows the data it holds, not the count it declares.
+- **eds codegen**: in the header comment of the generated code, the EDS file name is written with control characters, U+2028 and U+2029, the byte order mark and invalid UTF-8 replaced by `_`.
+- **docs**: the help of `diagnose` names exit code 1 (findings) for a failed or skipped check, the code it returns (it said 7). README and SECURITY.md give exit code 2 (`confirmation_required`) for a change without `--yes`, as docs/exitcodes.md does (they said 3). README, SECURITY.md, docs/exitcodes.md and docs/commands.md cover the two breaking changes.
+- **CI**: a job runs `make e2e`, the end-to-end tests of the built binary.
+- **32-bit builds**: `--type` (reset), `--count` (tag read) and `--max-devices` (discover) read their value in 64 bits. A value beyond the range of a 32-bit int was cut to its low 32 bits (`reset --type 4294967296` was type 0, a power cycle); it is now refused by the flag's range check (exit 3), as on 64-bit builds.
+- **deps**: go-ethernetip v0.8.1 (was v0.8.0), whose `eds.GenerateGo` keeps the header comment on one line for any source name, as `eds codegen` already passes it.
+
+---
+
 ## v0.8.1
 
 **Date:** 2026-11-14

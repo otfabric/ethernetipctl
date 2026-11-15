@@ -5,6 +5,7 @@ package adapter
 
 import (
 	"context"
+	"sync"
 
 	"github.com/spf13/cobra"
 
@@ -39,7 +40,9 @@ Flags given with --config override the model's identity.
 
 Every event (listening, connected, disconnected, connection-opened, connection-closed,
 assembly-write, tag-write, reset, with --requests every request, stopping) is written to
-stdout as it happens: a line of text, a JSON object per line, or a table row. It runs until
+stdout as it happens: a line of text, a JSON object per line, or a table row. Up to 1024
+events wait for stdout; while stdout does not keep up the adapter goes on serving, the
+events beyond those are left out, and a "dropped" event counts them. It runs until
 interrupted (Ctrl-C) or for --duration. It listens on every interface by default: use
 --listen to restrict it. "connections" against the adapter shows its connection counters.`,
 		Example: `
@@ -69,9 +72,15 @@ interrupted (Ctrl-C) or for --duration. It listens on every interface by default
 				return err
 			},
 			func(ctx context.Context, out *format.StreamWriter) (int, error) {
+				// log runs on the adapter's event goroutine, which may outlive Run when
+				// stdout does not take the last events.
+				var mu sync.Mutex
 				var writeErr error
 				log := func(e types.AdapterEvent) {
-					if err := out.Write(&e); err != nil && writeErr == nil {
+					err := out.Write(&e)
+					mu.Lock()
+					defer mu.Unlock()
+					if err != nil && writeErr == nil {
 						writeErr = err
 					}
 				}
@@ -79,6 +88,8 @@ interrupted (Ctrl-C) or for --duration. It listens on every interface by default
 				if err := adapter.Run(ctx, &cfg, g, env.Logger(), log); err != nil {
 					return 0, err
 				}
+				mu.Lock()
+				defer mu.Unlock()
 				if writeErr != nil {
 					return 0, errs.Output(errs.CodeOutputWriteFailed, writeErr)
 				}

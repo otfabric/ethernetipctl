@@ -213,15 +213,18 @@ func (r *ResetResult) MarshalTextOutput() (string, error) {
 	if r.Type == 1 {
 		what = "return to factory defaults"
 	}
-	return fmt.Sprintf("Reset type %d (%s) of %s accepted in %.1f ms", r.Type, what, r.Target, r.RTTMs), nil
+	return fmt.Sprintf("Reset type %d (%s) of %s accepted in %.1f ms", r.Type, what, r.via(), r.RTTMs), nil
 }
+
+// via names the device the reset went to: the target, and the route through it.
+func (r *ResetResult) via() string { return Messaging{Target: r.Target, Route: r.Route}.via() }
 
 // TableHeaders implements format.TableMarshaler.
 func (r *ResetResult) TableHeaders() []string { return []string{"TARGET", "TYPE", "RTT_MS"} }
 
 // TableRows implements format.TableMarshaler.
 func (r *ResetResult) TableRows() [][]string {
-	return [][]string{{r.Target, strconv.Itoa(r.Type), fmt.Sprintf("%.1f", r.RTTMs)}}
+	return [][]string{{r.via(), strconv.Itoa(r.Type), fmt.Sprintf("%.1f", r.RTTMs)}}
 }
 
 // Counter is a named counter.

@@ -31,7 +31,7 @@
 | `internal` | `internal_unexpected` |
 | `interrupted` | `context_canceled` |
 
-**Commands that change a device:** `write`, `reset`, `assembly write`, `tag write` and `io` with output data (`--output-size` above 0) need `--yes`. Without it they validate the invocation, open no connection, send nothing and exit `2` with code `confirmation_required`. A refusal by the target exits `6`, a missing answer `5`; after a timeout a write may or may not have been executed. Requests are never repeated.
+**Commands that change a device:** `write`, `reset`, `assembly write`, `tag write`, `io` with output data (`--output-size` above 0), and `forward-open` and `io` with `--config-data` need `--yes`. Without it they validate the invocation, open no connection, send nothing and exit `2` with code `confirmation_required`. A refusal by the target exits `6`, a missing answer `5`; after a timeout a write may or may not have been executed. Requests are never repeated.
 
 **Findings exit:** only `diagnose` uses `1`, and only after its report was written. A device that refuses to talk at all still gets a report (the failed `tcp-connect` or `register-session` check and the skipped rest), so `diagnose` never exits `4` or `5`.
 

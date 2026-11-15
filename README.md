@@ -277,7 +277,7 @@ I/O connection to 127.0.0.1:44818 open: O->T 0xC05EC026, T->O 0xA7F38EEF, API 10
 1 sample(s) written; sent 4, received 4, dropped 0, duplicates 3; state connected
 ```
 
-The I/O endpoint listens on UDP 2222 (`--io-address`); a different port is announced to the device in the Forward_Open, which not every device honours. CIP cannot list another device's connections: `connections` shows its counters, and the simulated adapter logs every connection it opens and closes.
+The I/O endpoint listens on UDP 2222 (`--io-address`); a different port is announced to the device in the Forward_Open, which not every device honours. Up to 1024 samples (at most 4 MiB of data as hex) wait for stdout: when stdout is slower than the device, the oldest are dropped, the summary counts them and `seq` shows the gap. CIP cannot list another device's connections: `connections` shows its counters, and the simulated adapter logs every connection it opens and closes.
 
 ### Diagnose
 
@@ -294,7 +294,7 @@ Diagnosis of 127.0.0.1:44818: 8 passed, 0 failed, 0 skipped in 3 ms
   OK      connection-manager        1.0 ms  close_format_rejects=0 close_other_rejects=0 close_requests=4 connection_timeouts=0 open_format_rejects=0 open_other_rejects=1 open_requests=5 open_resource_rejects=0
 ```
 
-Exit code 0 when everything passed, 7 when a check failed or was skipped; the report is always written.
+Exit code 0 when everything passed, 1 (findings) when a check failed or was skipped; the report is always written.
 
 ### Logix tags (Rockwell, vendor specific)
 
@@ -355,14 +355,16 @@ ethernetipctl adapter --listen 127.0.0.1 --logix --format json
 ethernetipctl adapter --config adapter.yaml --duration 10m
 ```
 
-The adapter answers sessions, ListIdentity (TCP and UDP), explicit messages (unconnected, routed to slot 0, Class 3), Forward_Open and Forward_Close, and exchanges I/O data on its assemblies. Every event (connections, assembly and tag writes, resets, and with `--requests` every request) is written to stdout. The model (identity, assemblies with initial data, echo pairs, Logix templates and tags) is described in [docs/adapter-config.md](docs/adapter-config.md); [testdata/adapter.yaml](testdata/adapter.yaml) is an example.
+The adapter answers sessions, ListIdentity (TCP and UDP), explicit messages (unconnected, routed to slot 0, Class 3), Forward_Open and Forward_Close, and exchanges I/O data on its assemblies. Every event (connections, assembly and tag writes, resets, and with `--requests` every request) is written to stdout. Up to 1024 events wait for stdout; while stdout does not keep up the adapter goes on serving, and a `dropped` event counts the events left out. The model (identity, assemblies with initial data, echo pairs, Logix templates and tags) is described in [docs/adapter-config.md](docs/adapter-config.md); [testdata/adapter.yaml](testdata/adapter.yaml) is an example.
 
 ---
 
 ## Safety
 
-- **Writes need explicit intent.** `write`, `reset`, `assembly write`, `tag write` and `io` with output data (`--output-size` above 0) do nothing without `--yes`: they validate the invocation, open no connection, send nothing and exit `2` (`confirmation_required`). `--yes` has no environment variable on purpose.
+- **Writes need explicit intent.** `write`, `reset`, `assembly write`, `tag write`, `io` with output data (`--output-size` above 0), and `forward-open` and `io` with `--config-data` do nothing without `--yes`: they validate the invocation, open no connection, send nothing and exit `2` (`confirmation_required`). `--yes` has no environment variable on purpose.
 - **No scanning.** `discover` sends one ListIdentity datagram to the one address you give (a broadcast address reaches one segment); every other command talks to one device. Prefixes, ranges, lists and wildcards are refused.
+- **A change goes where the command line says.** `write`, `reset`, `assembly write` and `tag write` take a route only from `--route`. With `ETHERNETIPCTL_ROUTE` set and no `--route`, they send the change to the host on the command line and say on stderr that the variable is not used.
+- **`--config-data` writes the configuration assembly.** `forward-open` and `io` send it in the connection path, and the device takes it as its configuration when it accepts the connection: hence `--yes`.
 - **Requests are never repeated.** After a timeout, a write may or may not have been executed: read back before you write again.
 - **I/O connections write outputs.** An exclusive-owner connection sends output data at every RPI, zeros until `--output-data` is applied; `--idle` sends it in idle mode. Use an input-only connection (`--output` the heartbeat point, `--output-size 0`) to watch inputs without writing anything.
 - **The adapter listens on every interface by default.** Use `--listen` to bind it to one address.
@@ -390,8 +392,8 @@ Every command writes `--format json`: one indented document, or JSON Lines for t
 |---|---|
 | 0 | Success |
 | 1 | Findings: `diagnose` with a failed or skipped check |
-| 2 | Usage: unknown command or flag, missing argument |
-| 3 | Invalid input (nothing sent), a change without `--yes`, `eds validate` of a file with errors |
+| 2 | Usage: unknown command or flag, missing argument, a change without `--yes` (`confirmation_required`) |
+| 3 | Invalid input (nothing sent), `eds validate` of a file with errors |
 | 4 | Transport: connection refused or lost, cannot listen |
 | 5 | Timeout: no answer, or an I/O connection timed out |
 | 6 | Refused by the target (CIP status) or protocol error |
@@ -410,7 +412,7 @@ See [docs/json-output.md](docs/json-output.md) (field conventions, a stable cont
 | `ETHERNETIPCTL_FORMAT` (`ETHERNETIPCTL_OUTPUT_FORMAT` stays accepted) | `--format` |
 | `ETHERNETIPCTL_TIMEOUT` | `--timeout` |
 | `ETHERNETIPCTL_PORT` | `--port` |
-| `ETHERNETIPCTL_ROUTE` | `--route` |
+| `ETHERNETIPCTL_ROUTE` | `--route` of the reading commands (not of `write`, `reset`, `assembly write`, `tag write`) |
 | `ETHERNETIPCTL_CONNECTED` | `--connected` |
 | `ETHERNETIPCTL_TYPE` | `read --type` |
 | `ETHERNETIPCTL_DISCOVER_ADDRESS` | `discover --address` |
@@ -418,7 +420,7 @@ See [docs/json-output.md](docs/json-output.md) (field conventions, a stable cont
 | `ETHERNETIPCTL_ADAPTER_CONFIG` | `adapter --config` |
 | `ETHERNETIPCTL_LISTEN` | `adapter --listen` |
 
-A flag on the command line wins over its variable. A malformed value (`ETHERNETIPCTL_PORT=banana`) is an error (exit 3) before anything runs.
+A flag on the command line wins over its variable. A command that changes the device takes its route only from `--route`: with `ETHERNETIPCTL_ROUTE` set and no `--route`, it goes to the host on the command line and prints `ETHERNETIPCTL_ROUTE=1/0 is not used: a change takes its route only from --route` on stderr. A malformed value (`ETHERNETIPCTL_PORT=banana`) is an error (exit 3) before anything runs.
 
 ---
 

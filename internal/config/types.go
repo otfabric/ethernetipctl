@@ -90,7 +90,7 @@ type IOConnConfig struct {
 	Multicast         bool          `desc:"Ask for the input (T->O) data by multicast" flag:"multicast"`
 	Large             bool          `desc:"Use Large_Forward_Open (chosen anyway for sizes above 511 octets)" flag:"large"`
 	TimeoutMultiplier uint8         `desc:"The connection times out after RPI x 4 << multiplier (0-7)" flag:"timeout-multiplier"`
-	ConfigData        string        `desc:"Configuration data sent in the connection path, as hex (an even number of octets)" flag:"config-data"`
+	ConfigData        string        `desc:"Configuration data sent in the connection path, as hex (an even number of octets); the target writes it to its configuration assembly, so it needs --yes" flag:"config-data"`
 }
 
 // TriadConfig is the connection triad that identifies a connection.
@@ -106,6 +106,7 @@ type ForwardOpenConfig struct {
 	IOConnConfig
 	TriadConfig
 	Keep bool `desc:"Leave the connection open instead of closing it with Forward_Close: the target times it out, or forward-close closes it" flag:"keep"`
+	Yes  bool `desc:"Confirm that the target writes --config-data to its configuration assembly: without it nothing is sent" flag:"yes"`
 }
 
 // ForwardCloseConfig drives `forward-close`.
@@ -124,7 +125,7 @@ type IOConfig struct {
 	Changes    bool          `desc:"Only write a sample when the input data or run state changes" flag:"changes"`
 	OutputData string        `desc:"Output data to send, as hex (--output-size octets; default zeros); needs --yes" flag:"output-data"`
 	Idle       bool          `desc:"Send the output in idle instead of run" flag:"idle"`
-	Yes        bool          `desc:"Confirm that the connection writes output data (--output-size above 0): without it nothing is sent" flag:"yes"`
+	Yes        bool          `desc:"Confirm that the connection writes output data (--output-size above 0) or --config-data: without it nothing is sent" flag:"yes"`
 }
 
 // AssemblyConfig drives `assembly read` and `assembly write`.

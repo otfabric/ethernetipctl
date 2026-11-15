@@ -14,6 +14,7 @@ import (
 	"strings"
 	"time"
 	"unicode"
+	"unicode/utf8"
 
 	"github.com/otfabric/go-ethernetip/cip"
 	"github.com/otfabric/go-ethernetip/eds"
@@ -132,11 +133,24 @@ func EDSCodegen(path string, cfg config.EDSCodegenConfig) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	src, err := eds.GenerateGo(f, eds.GenerateOptions{Package: cfg.Package, Source: filepath.Base(path)})
+	src, err := eds.GenerateGo(f, eds.GenerateOptions{Package: cfg.Package, Source: commentName(filepath.Base(path))})
 	if err != nil {
 		return nil, edsErr(path, err)
 	}
 	return src, nil
+}
+
+// commentName returns a file name for the one-line header comment of generated code:
+// control characters (C0, DEL, C1), the line and paragraph separators U+2028 and U+2029,
+// the byte order mark and octets that are not UTF-8 become "_", so the header stays one
+// line of comment whatever the file is called.
+func commentName(name string) string {
+	return strings.Map(func(r rune) rune {
+		if r < 0x20 || r >= 0x7F && r <= 0x9F || r == 0x2028 || r == 0x2029 || r == 0xFEFF || r == utf8.RuneError {
+			return '_'
+		}
+		return r
+	}, strings.ToValidUTF8(name, string(utf8.RuneError)))
 }
 
 func validIdent(s string) bool {

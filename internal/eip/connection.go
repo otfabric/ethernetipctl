@@ -70,17 +70,14 @@ func (e Env) Session(ctx context.Context, host string, cfg config.SessionConfig)
 }
 
 // connectionPath returns the connection path of an I/O connection: the Assembly class, the
-// configuration instance, the consumed and produced connection points and the
-// configuration data.
+// configuration instance (instance 0 when --config is 0, as go-ethernetip's scanner sends
+// it for io), the consumed and produced connection points and the configuration data.
 func connectionPath(p config.ConnectionPathConfig, configData []byte) (cip.Path, error) {
 	if p.Output == 0 || p.Input == 0 {
 		return nil, invalid(errs.CodeInvalidInput, "--output and --input (the assembly instances of the connection) are required")
 	}
-	path := cip.Path{cip.ClassSegment(cip.ClassAssembly)}
-	if p.Config != 0 {
-		path = append(path, cip.InstanceSegment(p.Config))
-	}
-	path = append(path, cip.ConnectionPointSegment(p.Output), cip.ConnectionPointSegment(p.Input))
+	path := cip.Path{cip.ClassSegment(cip.ClassAssembly), cip.InstanceSegment(p.Config),
+		cip.ConnectionPointSegment(p.Output), cip.ConnectionPointSegment(p.Input)}
 	if len(configData) > 0 {
 		if len(configData)%2 != 0 {
 			return nil, invalid(errs.CodeInvalidValue, "--config-data has %d octets: it must be an even number", len(configData))
@@ -155,13 +152,19 @@ func triad(t config.TriadConfig) cip.Triad {
 	return out
 }
 
-// CheckForwardOpen validates `forward-open` before anything is sent.
+// CheckForwardOpen validates `forward-open` before anything is sent. --config-data needs
+// --yes: the target writes it to its configuration assembly.
 func CheckForwardOpen(cfg config.ForwardOpenConfig) error {
 	if _, err := ParseRoute(cfg.Route); err != nil {
 		return err
 	}
-	_, err := checkIO(cfg.IOConnConfig)
-	return err
+	if _, err := checkIO(cfg.IOConnConfig); err != nil {
+		return err
+	}
+	if cfg.ConfigData != "" {
+		return confirm(cfg.Yes, "forward-open with --config-data")
+	}
+	return nil
 }
 
 // ForwardOpen runs `forward-open`: a Forward_Open of a Class 1 cyclic I/O connection, which
