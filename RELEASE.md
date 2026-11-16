@@ -1,5 +1,20 @@
 # ethernetipctl Releases
 
+## v0.9.1
+
+**Date:** 2026-11-16
+**Previous release:** v0.9.0
+
+## Summary
+
+Built on go-ethernetip v0.8.3 (was v0.8.2). No flag or JSON output changes.
+
+## Changes
+
+- **io**: a connection lost between the Forward_Open reply and the start of the I/O exchange is reported as a connection error (`connection_lost`, exit status 4). Before, it came out as invalid input (`invalid_input`, exit status 3, "production without an interval or destination"), which pointed at the flags. The fix is in the scanner of go-ethernetip v0.8.3 (go-ethernetip RELEASE.md, v0.8.3).
+
+---
+
 ## v0.9.0
 
 **Date:** 2026-11-15
