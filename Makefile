@@ -35,7 +35,7 @@ LDFLAGS := -ldflags "-s -w -X 'main.version=$(VERSION)' -X 'main.tag=$(TAG)' -X 
 RELEASE_DIR   := release
 
 # docsync release of docs-check (DOC-008).
-DOCSYNC_VERSION := v0.3.1
+DOCSYNC_VERSION := v0.4.0
 
 # Minimum total statement coverage (percent) enforced by `make coverage`.
 COVERAGE_MIN ?= 90
