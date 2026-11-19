@@ -461,16 +461,34 @@ func addTag(ts *logix.TagServer, t Tag) error {
 		dt, _ := cip.ParseDataType(upper)
 		v, err = logix.Floats(dt, fs...)
 	default:
+		// Signed types and BOOL as int64, the unsigned ones as uint64:
+		// ULINT and LWORD values above the int64 range are taken, as tag
+		// write takes them.
+		dt, _ := cip.ParseDataType(upper)
+		signed := dt.IsSigned() || dt == cip.TypeBOOL
 		var is []int64
+		var us []uint64
 		for p := range strings.SplitSeq(t.Value, ",") {
-			n, perr := strconv.ParseInt(strings.TrimSpace(p), 0, 64)
+			p = strings.TrimSpace(p)
+			if signed {
+				n, perr := strconv.ParseInt(p, 0, 64)
+				if perr != nil {
+					return fmt.Errorf("value %q", p)
+				}
+				is = append(is, n)
+				continue
+			}
+			n, perr := strconv.ParseUint(p, 0, 64)
 			if perr != nil {
 				return fmt.Errorf("value %q", p)
 			}
-			is = append(is, n)
+			us = append(us, n)
 		}
-		dt, _ := cip.ParseDataType(upper)
-		v, err = logix.Ints(dt, is...)
+		if signed {
+			v, err = logix.Ints(dt, is...)
+		} else {
+			v, err = logix.Uints(dt, us...)
+		}
 	}
 	if err != nil {
 		return err

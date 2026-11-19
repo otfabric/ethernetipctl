@@ -47,11 +47,25 @@ func (e Env) openLogix(ctx context.Context, host string, m config.MessagingConfi
 
 // checkTag validates a tag name.
 func checkTag(tag string) (logix.TagPath, error) {
-	tp, err := logix.ParseTag(strings.TrimSpace(tag))
+	name := strings.TrimSpace(tag)
+	tp, err := logix.ParseTag(name)
 	if err != nil {
-		return logix.TagPath{}, errs.InvalidInput(errs.CodeInvalidPath, fmt.Sprintf("invalid tag name %q: %v", tag, trimPrefix(err.Error())), err)
+		return logix.TagPath{}, errs.InvalidInput(errs.CodeInvalidPath, fmt.Sprintf("invalid tag name %q: %s", tag, tagNameErrText(err, name)), err)
 	}
 	return tp, nil
+}
+
+// tagNameErrText is what ParseTag's error says beyond "invalid tag name"
+// and the name, which the message already gives: `symbol "1x"`, not
+// `logix: invalid tag name: "1x": symbol "1x"`.
+func tagNameErrText(err error, name string) string {
+	s := strings.TrimPrefix(err.Error(), logix.ErrTagName.Error())
+	s = strings.TrimPrefix(s, ": ")
+	s = strings.TrimPrefix(s, strconv.Quote(name)+": ")
+	if s == "" {
+		return trimPrefix(err.Error())
+	}
+	return s
 }
 
 // typeName renders the type of a value.

@@ -42,3 +42,19 @@ func TestValuesOfSizedByItsData(t *testing.T) {
 		t.Errorf("count -1: %v", got)
 	}
 }
+
+// TestCheckTagMessage: a refused tag name is named once, with what is wrong
+// with it, without the library's prefix.
+func TestCheckTagMessage(t *testing.T) {
+	for _, c := range []struct{ name, want string }{
+		{"1x", `invalid tag name "1x": symbol "1x"`},
+		{"Program:Main", `invalid tag name "Program:Main": program without a tag`},
+		{"A[1", `invalid tag name "A[1": unclosed index`},
+		{"", `invalid tag name "": empty`},
+	} {
+		_, err := checkTag(c.name)
+		if err == nil || err.Error() != c.want {
+			t.Errorf("%q: %v, want %s", c.name, err, c.want)
+		}
+	}
+}

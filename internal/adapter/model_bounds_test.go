@@ -133,3 +133,52 @@ func TestModelBounds(t *testing.T) {
 		})
 	}
 }
+
+// TestModelUnsignedValues: unsigned tags take values up to their type's
+// maximum, ULINT and LWORD above the int64 range included; a value above
+// the type or a negative one is refused.
+func TestModelUnsignedValues(t *testing.T) {
+	for _, c := range []struct {
+		typ, value string
+		want       uint64
+		ok         bool
+	}{
+		{"ULINT", "18446744073709551615", 1<<64 - 1, true},
+		{"LWORD", "0x8000000000000000", 1 << 63, true},
+		{"UDINT", "4294967295", 1<<32 - 1, true},
+		{"USINT", "255", 255, true},
+		{"BOOL", "1", 0xFF, true}, // Logix stores true as 0xFF
+		{"USINT", "256", 0, false},
+		{"UINT", "-1", 0, false},
+		{"ULINT", "18446744073709551616", 0, false},
+	} {
+		m, err := resolveModel(t, modelIdentity+fmt.Sprintf("logix:\n  tags: [{name: X, type: %s, value: %q}]\n", c.typ, c.value))
+		if err != nil {
+			t.Errorf("%s %s: %v", c.typ, c.value, err)
+			continue
+		}
+		// Values are checked when the tag database is built.
+		ts, err := m.Logix.buildTagServer()
+		if !c.ok {
+			if err == nil {
+				t.Errorf("%s %s: accepted", c.typ, c.value)
+			}
+			continue
+		}
+		if err != nil {
+			t.Errorf("%s %s: %v", c.typ, c.value, err)
+			continue
+		}
+		v, err := ts.Get("X")
+		if err != nil {
+			t.Fatal(err)
+		}
+		var got uint64
+		for i := len(v.Data) - 1; i >= 0; i-- {
+			got = got<<8 | uint64(v.Data[i])
+		}
+		if got != c.want {
+			t.Errorf("%s %s: %x, want %x", c.typ, c.value, v.Data, c.want)
+		}
+	}
+}

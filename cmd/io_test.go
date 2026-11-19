@@ -7,6 +7,7 @@ import (
 	"context"
 	"encoding/hex"
 	"strings"
+	"sync"
 	"testing"
 )
 
@@ -180,4 +181,35 @@ func TestConfigDataNeedsYes(t *testing.T) {
 	f.run(t, noData...).want(t, 0)
 	f.run(t, append(noData, "--yes")...).want(t, 0)
 	run(t, "forward-open", "--help").want(t, 0).has(t, "--yes", "needs --yes")
+}
+
+// TestIOStartsWithOutputAndRunState: the first datagram the target
+// consumes already carries --output-data, in idle with --idle; no datagram
+// with zeros in run comes first.
+func TestIOStartsWithOutputAndRunState(t *testing.T) {
+	data := strings.Repeat("A5", 32)
+	want, _ := hex.DecodeString(data)
+	for _, idle := range []bool{true, false} {
+		f := startFixture(t)
+		var mu sync.Mutex
+		var first []byte
+		var firstRun, seen bool
+		f.out.OnWrite(func(d []byte, run bool) {
+			mu.Lock()
+			defer mu.Unlock()
+			if !seen {
+				first, firstRun, seen = append([]byte(nil), d...), run, true
+			}
+		})
+		extra := []string{"--yes", "--output-data", data, "--duration", "50ms"}
+		if idle {
+			extra = append(extra, "--idle")
+		}
+		f.run(t, ioArgs("150", "32", extra...)...).want(t, 0)
+		mu.Lock()
+		if !seen || !bytes.Equal(first, want) || firstRun == idle {
+			t.Errorf("idle %v: first datagram %x run %v (seen %v)", idle, first, firstRun, seen)
+		}
+		mu.Unlock()
+	}
 }
