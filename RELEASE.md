@@ -1,5 +1,24 @@
 # ethernetipctl Releases
 
+## v0.9.2
+
+**Date:** 2026-11-20
+**Previous release:** v0.9.1
+
+## Summary
+
+Built on go-ethernetip v0.9.0 (was v0.8.3). No flag or JSON output changes.
+
+## Changes
+
+- **tag**: `tag read`, `write`, `list` and `decode` accept the tags Logix gives I/O modules, one controller-scoped name with colons (`Local:1:I.Data[0]`, `Remote:2:C`); they were refused as invalid tag names (exit status 3, `invalid_path`). The adapter's model takes them as tag names too. The parsing is go-ethernetip's (RELEASE.md, v0.9.0); not verified against a controller, as no recording or interop peer has module tags.
+
+### Tests
+
+- `TestAdapterFromModel`: a module tag (`Local:2:O`) in the model is listed, read, written and bit-written by its name.
+
+---
+
 ## v0.9.1
 
 **Date:** 2026-11-16
