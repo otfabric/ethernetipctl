@@ -1,5 +1,32 @@
 # ethernetipctl Releases
 
+## v0.9.2
+
+**Date:** 2026-11-20
+**Previous release:** v0.9.1
+
+## Summary
+
+Built on go-ethernetip v0.9.0 (was v0.8.3), with three more fixes. No flag or JSON field changes; the text of the invalid tag name error is shorter.
+
+## Changes
+
+### Fixes
+
+- **tag**: `tag read`, `write`, `list` and `decode` accept the tags Logix gives I/O modules, one controller-scoped name with colons (`Local:1:I.Data[0]`, `Remote:2:C`); they were refused as invalid tag names (exit status 3, `invalid_path`). The adapter's model takes them as tag names too. The parsing is go-ethernetip's (RELEASE.md, v0.9.0); not verified against a controller, as no recording or interop peer has module tags.
+- **io**: the first datagrams carry `--output-data` and, with `--idle`, the idle state. The output data and the run state were set after the connection opened, and it produces as soon as it is open: its first datagram(s) could carry zeros in run, even with `--idle`, so a device could act on outputs before they were set. They are now part of the connection's configuration (`scanner.IOConfig.Output` and `Idle`).
+- **adapter**: a model's ULINT and LWORD tags take values above the int64 range (up to 18446744073709551615), as `tag write` does; they were refused as invalid values.
+- **tag**: an invalid tag name is named once in the message (`invalid tag name "1x": symbol "1x"`), without the library's `logix: invalid tag name: "1x":` repeated after it.
+
+### Tests
+
+- `TestAdapterFromModel`: a module tag (`Local:2:O`) in the model is listed, read, written and bit-written by its name.
+- `TestScannerConfigStartsWithOutputAndIdle`, `TestIOStartsWithOutputAndRunState`: the output data and the idle state are in the connection's configuration; the target's first datagram carries them.
+- `TestModelUnsignedValues`: unsigned model values up to their type's maximum; above it, or negative, refused.
+- `TestCheckTagMessage`: the message of a refused tag name.
+
+---
+
 ## v0.9.1
 
 **Date:** 2026-11-16

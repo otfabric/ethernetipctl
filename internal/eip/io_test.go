@@ -172,3 +172,19 @@ func TestIOWithAStalledOutput(t *testing.T) {
 		t.Errorf("summary: %s", stderr.String())
 	}
 }
+
+// TestScannerConfigStartsWithOutputAndIdle: the output data and the idle
+// state go into the scanner's configuration, so the first datagram carries
+// them; without output, no Output is set.
+func TestScannerConfigStartsWithOutputAndIdle(t *testing.T) {
+	out := []byte{1, 2, 3, 4}
+	for _, idle := range []bool{true, false} {
+		sc := scannerConfig(config.IOConfig{IOConnConfig: config.IOConnConfig{OutputSize: 4}, Idle: idle}, out, nil, nil)
+		if !bytes.Equal(sc.Output, out) || sc.Idle != idle {
+			t.Errorf("idle %v: Output %x, Idle %v", idle, sc.Output, sc.Idle)
+		}
+	}
+	if sc := scannerConfig(config.IOConfig{}, []byte{}, nil, nil); sc.Output != nil {
+		t.Errorf("no output: Output %x", sc.Output)
+	}
+}

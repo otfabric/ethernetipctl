@@ -102,6 +102,12 @@ func TestAdapterFromModel(t *testing.T) {
 	run(t, "tag", "read", a.addr, "Levels", "--count", "3").want(t, 0).has(t, "[2] 3.5")
 	run(t, "tag", "read", a.addr, "Label").want(t, 0).has(t, `"tank 1"`)
 	run(t, "tag", "read", a.addr, "Program:Main.Step").want(t, 0).has(t, "[0] 3")
+	// The tag of an I/O module: one controller-scoped symbol with colons.
+	run(t, "tag", "list", a.addr).want(t, 0).has(t, "Local:2:O[2]")
+	run(t, "tag", "read", a.addr, "Local:2:O[1]").want(t, 0).has(t, "[0] 20")
+	run(t, "tag", "write", a.addr, "Local:2:O[0]", "--type", "DINT", "--value", "-3", "--yes").want(t, 0)
+	run(t, "tag", "write", a.addr, "Local:2:O[1].3", "--type", "DINT", "--value", "1", "--yes").want(t, 0)
+	run(t, "tag", "read", a.addr, "Local:2:O", "--count", "2").want(t, 0).has(t, "[0] -3", "[1] 28")
 	run(t, "tag", "types", a.addr, "0x200").want(t, 0).has(t, "Position", "Open")
 
 	// The same model as JSON, with text events and a duration.

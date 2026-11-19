@@ -34,7 +34,8 @@ The controller is usually reached through the EtherNet/IP module of its chassis:
 1/0 for the controller in slot 0. --connected uses a Class 3 connection (Large_Forward_Open,
 4000 octets), as Logix programming tools do; requests are otherwise unconnected. Tag names
 are controller-scoped (Count), program-scoped (Program:Main.Count), array elements
-(Values[3], Grid[1,2]), structure members (Motor.Speed) or bits of an integer (Flags.5).`,
+(Values[3], Grid[1,2]), structure members (Motor.Speed), bits of an integer (Flags.5) or the
+tags of I/O modules (Local:1:I.Data[0], one controller-scoped name with colons).`,
 	}
 	cmd.AddCommand(newReadCmd(g), newWriteCmd(g), newListCmd(g), newTypesCmd(g), newDecodeCmd(g))
 	return cmd

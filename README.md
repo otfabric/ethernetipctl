@@ -301,6 +301,7 @@ Exit code 0 when everything passed, 1 (findings) when a check failed or was skip
 ```console
 ethernetipctl tag list 192.168.1.10 --route 1/0
 ethernetipctl tag read 192.168.1.10 Program:Main.Counts[2] --count 5 --route 1/0
+ethernetipctl tag read 192.168.1.10 'Local:1:I.Data[0]' --route 1/0   # an I/O module's tag
 ethernetipctl tag write 192.168.1.10 Setpoint --type REAL --value 12.5 --route 1/0 --yes
 ethernetipctl tag write 192.168.1.10 Flags.3 --type DINT --value 1 --route 1/0 --yes
 ethernetipctl tag types 192.168.1.10 0x123 --route 1/0
@@ -366,7 +367,7 @@ The adapter answers sessions, ListIdentity (TCP and UDP), explicit messages (unc
 - **A change goes where the command line says.** `write`, `reset`, `assembly write` and `tag write` take a route only from `--route`. With `ETHERNETIPCTL_ROUTE` set and no `--route`, they send the change to the host on the command line and say on stderr that the variable is not used.
 - **`--config-data` writes the configuration assembly.** `forward-open` and `io` send it in the connection path, and the device takes it as its configuration when it accepts the connection: hence `--yes`.
 - **Requests are never repeated.** After a timeout, a write may or may not have been executed: read back before you write again.
-- **I/O connections write outputs.** An exclusive-owner connection sends output data at every RPI, zeros until `--output-data` is applied; `--idle` sends it in idle mode. Use an input-only connection (`--output` the heartbeat point, `--output-size 0`) to watch inputs without writing anything.
+- **I/O connections write outputs.** An exclusive-owner connection sends output data at every RPI: `--output-data` (zeros without it) from the first datagram on, in idle mode from the first datagram with `--idle`. Use an input-only connection (`--output` the heartbeat point, `--output-size 0`) to watch inputs without writing anything.
 - **The adapter listens on every interface by default.** Use `--listen` to bind it to one address.
 
 See [SECURITY.md](SECURITY.md) for the details.

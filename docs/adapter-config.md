@@ -88,7 +88,7 @@ An emulated Rockwell Logix tag database (vendor specific, not CIP) for the `tag`
 | `program_name` | The project name the Program Name object reports (default `OTFabric`) |
 | `templates` | Structure (UDT) definitions: `id` (1 to 0x0FFF), `name`, `handle` (unique), `size` in octets, `members` |
 | `templates[].members` | `name`, `type` (an atomic type, `STRING`, or `struct` with `template`), `array` (the length of an array member), `bit` (the bit of a BOOL member in the octet at `offset`: 0 to 7), `offset` |
-| `tags` | `name` (controller scope, or `Program:<name>.<tag>`), `type` (`BOOL`, `SINT`, `INT`, `DINT`, `LINT`, `USINT`, `UINT`, `UDINT`, `ULINT`, `REAL`, `LREAL`, `BYTE`, `WORD`, `DWORD`, `LWORD`, `STRING`, or `struct` with `template`), `dims` (up to three array dimensions), `value` |
+| `tags` | `name` (controller scope, an I/O module's tag such as `Local:1:I`, or `Program:<name>.<tag>`), `type` (`BOOL`, `SINT`, `INT`, `DINT`, `LINT`, `USINT`, `UINT`, `UDINT`, `ULINT`, `REAL`, `LREAL`, `BYTE`, `WORD`, `DWORD`, `LWORD`, `STRING`, or `struct` with `template`), `dims` (up to three array dimensions), `value` |
 | `tags[].value` | The initial value: one value per element, comma-separated (decimal or 0x-prefixed hex for integers); for `STRING` the text, several separated by `\|` for an array. A structure tag starts zeroed |
 
 A Logix BOOL member is a bit of a hidden host member, as the controllers lay them out: declare the host (`SINT` at the same offset) as in the example. Every write of a tag by an originator is logged as a `tag-write` event.

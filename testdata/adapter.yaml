@@ -34,3 +34,4 @@ logix:
     - {name: Label, type: STRING, value: "tank 1"}
     - {name: Valves, type: struct, template: 0x200, dims: [2]}
     - {name: "Program:Main.Step", type: INT, value: "3"}
+    - {name: "Local:2:O", type: DINT, dims: [2], value: "10,20"}

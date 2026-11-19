@@ -162,22 +162,10 @@ func (e Env) IO(ctx context.Context, host string, cfg config.IOConfig, write fun
 		cancel()
 	}()
 	smp := &sampler{changes: cfg.Changes, notify: make(chan struct{}, 1)}
-	ioc, err := sc.Open(ctx, scanner.IOConfig{
-		ConfigInstance: cfg.Config, ConfigData: configData,
-		OutputInstance: cfg.Output, InputInstance: cfg.Input,
-		OutputSize: int(cfg.OutputSize), InputSize: int(cfg.InputSize),
-		RPI: cfg.RPI, Multicast: cfg.Multicast, Large: cfg.Large, TimeoutMultiplier: cfg.TimeoutMultiplier,
-		OnInput: smp.input,
-	})
+	ioc, err := sc.Open(ctx, scannerConfig(cfg, out, configData, smp.input))
 	if err != nil {
 		return 0, WrapError(err)
 	}
-	if cfg.OutputSize > 0 {
-		if err := ioc.SetOutput(out); err != nil {
-			return 0, WrapError(err)
-		}
-	}
-	ioc.SetRun(!cfg.Idle)
 	info := ioc.Info()
 	_, _ = fmt.Fprintf(stderr, "I/O connection to %s open: O->T 0x%08X, T->O 0x%08X, API %v/%v, path %s\n",
 		t, info.OTConnID, info.TOConnID, info.OTRPI, info.TORPI, info.Path)
@@ -245,4 +233,23 @@ func (e Env) ioSummary(w io.Writer, ioc *scanner.IO, smp *sampler, written uint6
 		_, _ = fmt.Fprintf(w, "; %d sample(s) not written: the output did not keep up", n)
 	}
 	_, _ = fmt.Fprintln(w)
+}
+
+// scannerConfig is the scanner's configuration of an I/O connection. The
+// output data and the run/idle state are part of it, not set after Open:
+// the connection produces as soon as it is open, and its first datagrams
+// would otherwise carry zeros in run, whatever --output-data and --idle say.
+func scannerConfig(cfg config.IOConfig, out, configData []byte, onInput func([]byte, bool)) scanner.IOConfig {
+	sc := scanner.IOConfig{
+		ConfigInstance: cfg.Config, ConfigData: configData,
+		OutputInstance: cfg.Output, InputInstance: cfg.Input,
+		OutputSize: int(cfg.OutputSize), InputSize: int(cfg.InputSize),
+		RPI: cfg.RPI, Multicast: cfg.Multicast, Large: cfg.Large, TimeoutMultiplier: cfg.TimeoutMultiplier,
+		Idle:    cfg.Idle,
+		OnInput: onInput,
+	}
+	if cfg.OutputSize > 0 {
+		sc.Output = out
+	}
+	return sc
 }
