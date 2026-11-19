@@ -61,8 +61,9 @@ func checkTag(tag string) (logix.TagPath, error) {
 func tagNameErrText(err error, name string) string {
 	s := strings.TrimPrefix(err.Error(), logix.ErrTagName.Error())
 	s = strings.TrimPrefix(s, ": ")
-	s = strings.TrimPrefix(s, strconv.Quote(name)+": ")
-	if s == "" {
+	q := strconv.Quote(name)
+	s = strings.TrimPrefix(s, q+": ")
+	if s == "" || s == q {
 		return trimPrefix(err.Error())
 	}
 	return s
