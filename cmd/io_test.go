@@ -357,3 +357,33 @@ func TestIORoute(t *testing.T) {
 	t.Setenv("ETHERNETIPCTL_ROUTE", "1/2")
 	f.run(t, ioArgs("152", "0", "--count", "1")...).want(t, 0).errHas(t, "ETHERNETIPCTL_ROUTE=1/2 is not used")
 }
+
+// TestForwardCloseTable: forward-close --format table names the target, the triad and the
+// path of the connection it closed, under a rule as wide as each header.
+func TestForwardCloseTable(t *testing.T) {
+	f := startFixture(t)
+	f.run(t, "forward-open", "ADDR", "--output", "152", "--input", "100", "--input-size", "32", "--rpi", "1s",
+		"--timeout-multiplier", "7", "--keep", "--connection-serial", "91", "--originator-vendor", "7", "--originator-serial", "1234").want(t, 0)
+	r := f.run(t, "forward-close", "ADDR", "--connection-serial", "91", "--originator-vendor", "7", "--originator-serial", "1234",
+		"--output", "152", "--input", "100", "--format", "table").want(t, 0)
+	lines := strings.Split(strings.TrimRight(r.stdout, "\n"), "\n")
+	if len(lines) != 3 {
+		t.Fatalf("table:\n%s", r.stdout)
+	}
+	if h := strings.Fields(lines[0]); strings.Join(h, " ") != "TARGET CONNECTION_SERIAL ORIGINATOR_VENDOR ORIGINATOR_SERIAL PATH" {
+		t.Errorf("headers %q", lines[0])
+	}
+	for i, rule := range strings.Fields(lines[1]) {
+		if want := strings.Repeat("-", len(strings.Fields(lines[0])[i])); rule != want {
+			t.Errorf("rule %d %q, want %q", i, rule, want)
+		}
+	}
+	for _, want := range []string{f.addr, "  91  ", "  7  ", "  1234  ", "[class 0x04] [instance 0] [point 152] [point 100]"} {
+		if !strings.Contains(lines[2], want) {
+			t.Errorf("row %q does not contain %q", lines[2], want)
+		}
+	}
+	if n := len(f.srv.Connections()); n != 0 {
+		t.Errorf("%d connections left open", n)
+	}
+}

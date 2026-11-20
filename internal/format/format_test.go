@@ -64,7 +64,7 @@ func TestWrite(t *testing.T) {
 		t.Errorf("json: %q, %v", b.String(), err)
 	}
 	b.Reset()
-	if err := Write(&b, FormatTable, row{Name: "abc", Value: 1}); err != nil || b.String() != "NAME  VALUE\n-     -\nabc   9\n" {
+	if err := Write(&b, FormatTable, row{Name: "abc", Value: 1}); err != nil || b.String() != "NAME  VALUE\n----  -----\nabc   9\n" {
 		t.Errorf("table: %q, %v", b.String(), err)
 	}
 	for name, err := range map[string]error{

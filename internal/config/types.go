@@ -15,7 +15,7 @@ const (
 // Global holds the flags every command has: the persistent flags of the root command.
 type Global struct {
 	OutputFormat string        `env:"ETHERNETIPCTL_FORMAT" desc:"Output format: text, json, or table" flag:"format"`
-	Timeout      time.Duration `env:"ETHERNETIPCTL_TIMEOUT" desc:"Timeout of connecting and of each request (e.g. 500ms, 5s)" flag:"timeout"`
+	Timeout      time.Duration `env:"ETHERNETIPCTL_TIMEOUT" desc:"Timeout of connecting and of each request (e.g. 500ms, 5s; 0 = 5s)" flag:"timeout"`
 	Port         uint16        `env:"ETHERNETIPCTL_PORT" desc:"Port of the target when the host names none (44818)" flag:"port"`
 	Debug        bool          `desc:"Log go-ethernetip's protocol trace to stderr, and show the causes of an error" flag:"debug"`
 }
@@ -206,7 +206,7 @@ type AdapterConfig struct {
 	ProductCode uint16        `desc:"Product code of the identity" flag:"product-code"`
 	Serial      uint32        `desc:"Serial number of the identity" flag:"serial"`
 	Revision    string        `desc:"Revision of the identity, major.minor" flag:"revision"`
-	Assemblies  []string      `desc:"Assembly as instance:kind:size, kinds input, output, config, input-only, listen-only (replaces the default set)" flag:"assembly"`
+	Assemblies  []string      `desc:"Assembly as instance:kind[:size], repeatable, kinds input, output, config, input-only, listen-only; without a size it holds no data, as the heartbeat points input-only and listen-only (replaces the default set)" flag:"assembly"`
 	Echo        bool          `desc:"Copy the data written to each output assembly to the input assembly of the same size with the lowest instance" flag:"echo"`
 	Logix       bool          `desc:"Emulate a Logix tag database with a few demo tags (Rockwell, vendor specific)" flag:"logix"`
 	Duration    time.Duration `desc:"Stop after this long (0 = until interrupted)" flag:"duration"`

@@ -26,7 +26,7 @@ ListIdentity to 127.0.0.1:44818: 1 device(s) in 502 ms
 ```console
 $ ethernetipctl discover --address 127.0.0.1 --wait 500ms --format table
 ADDRESS          PRODUCT                VENDOR  DEVICE_TYPE             PRODUCT_CODE  REVISION  SERIAL      STATE
--                -                      -       -                       -             -         -           -
+-------          -------                ------  -----------             ------------  --------  ------      -----
 127.0.0.1:44818  ethernetipctl adapter  65535   Communications Adapter  1             1.1       0x00000001  operational
 ```
 
