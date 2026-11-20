@@ -5,6 +5,7 @@ package cmd
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -249,4 +250,47 @@ func TestAdapterServesWhileStdoutStalls(t *testing.T) {
 	if evs["connected"] != 3 || evs["request"] == 0 {
 		t.Errorf("events %v", evs)
 	}
+}
+
+// TestAdapterTagAccess: a read-only tag is read but not written, a tag without access is
+// neither, both are listed; each refusal is answered with the model's status and logged
+// as a tag-refused event, and calls no tag-write.
+func TestAdapterTagAccess(t *testing.T) {
+	model := filepath.Join(t.TempDir(), "access.yaml")
+	must(t, os.WriteFile(model, []byte(`identity: {vendor_id: 1, product_code: 1, revision: "1.1", serial_number: 1, product_name: access}
+logix:
+  tags:
+    - {name: Open, type: DINT, value: "1"}
+    - {name: Setpoint, type: DINT, value: "5", access: read-only}
+    - {name: Secret, type: DINT, value: "9", access: NONE}
+    - {name: "Program:Main.Step", type: INT, value: "3", access: read-only}
+`), 0o600))
+	a := startAdapter(t, "--config", model)
+	run(t, "tag", "list", a.addr).want(t, 0).has(t, "Open", "Setpoint", "Secret")
+	run(t, "tag", "list", a.addr, "--program", "Main").want(t, 0).has(t, "Step")
+	run(t, "tag", "read", a.addr, "Setpoint").want(t, 0).has(t, "[0] 5")
+	run(t, "tag", "write", a.addr, "Setpoint", "--type", "DINT", "--value", "7", "--yes").want(t, 6).errHas(t, "0x0F")
+	run(t, "tag", "write", a.addr, "program:main.step", "--type", "INT", "--value", "4", "--yes").want(t, 6)
+	run(t, "tag", "read", a.addr, "Setpoint").want(t, 0).has(t, "[0] 5")
+	run(t, "tag", "read", a.addr, "Secret").want(t, 6).errHas(t, "0x0F")
+	run(t, "tag", "write", a.addr, "Open", "--type", "DINT", "--value", "2", "--yes").want(t, 0)
+	eventually(t, "the events", func() bool { ev := a.events(t); return ev["tag-refused"] == 3 && ev["tag-write"] == 1 })
+	var refused []string
+	for _, ev := range jsonLines(t, a.stdout.String()) {
+		if ev["event"] == "tag-refused" {
+			refused = append(refused, fmt.Sprintf("%v %v %v", ev["service"], ev["tag"], ev["status"]))
+		}
+	}
+	want := []string{"write Setpoint 0x0F privilege violation", "write Program:Main.Step 0x0F privilege violation", "read Secret 0x0F privilege violation"}
+	if strings.Join(refused, "|") != strings.Join(want, "|") {
+		t.Errorf("refused %v, want %v", refused, want)
+	}
+
+	// The model's status, and an access that does not parse.
+	id := "identity: {vendor_id: 1, product_code: 1, revision: \"1.1\", serial_number: 1, product_name: access}\n"
+	must(t, os.WriteFile(model, []byte(id+"logix:\n  access_status: 0x10\n  tags: [{name: R, type: DINT, access: read-only}]\n"), 0o600))
+	b := startAdapter(t, "--config", model)
+	run(t, "tag", "write", b.addr, "R", "--type", "DINT", "--value", "1", "--yes").want(t, 6).errHas(t, "0x10")
+	must(t, os.WriteFile(model, []byte(id+"logix:\n  tags: [{name: R, type: DINT, access: write-only}]\n"), 0o600))
+	run(t, "adapter", "--config", model, "--listen", "127.0.0.1:0", "--io-address", "127.0.0.1:0", "--duration", "10ms").want(t, 3).errHas(t, "access")
 }

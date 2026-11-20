@@ -173,6 +173,8 @@ Usage: `ethernetipctl forward-open <host[:port]> --output N --input N --rpi D [-
 | `--connection-serial uint16` |  | Connection serial number (0 = random) |
 | `--input uint32` |  | T->O connection point: the input assembly |
 | `--input-size uint16` |  | Size of the input (T->O) data in octets, without sequence count |
+| `--key string` |  | Electronic key put first in the connection path, as vendor/device-type/product-code/major.minor (decimal or 0x hex; 0 leaves a field unchecked), e.g. 1/12/65001/2.3: a target that is not that device refuses the connection |
+| `--key-compatible` |  | Set the compatibility bit of --key: a target with the same major and a minor revision at or above the key's is accepted |
 | `--keep` |  | Leave the connection open instead of closing it with Forward_Close: the target times it out, or forward-close closes it |
 | `--large` |  | Use Large_Forward_Open (chosen anyway for sizes above 511 octets) |
 | `--multicast` |  | Ask for the input (T->O) data by multicast |
@@ -221,12 +223,16 @@ Usage: `ethernetipctl io <host[:port]> --output N --input N --rpi D [--output-si
 | `--input uint32` |  | T->O connection point: the input assembly |
 | `--input-size uint16` |  | Size of the input (T->O) data in octets, without sequence count |
 | `--io-address string` |  | Local UDP address of the I/O endpoint; a port other than 2222 is announced to the target in Forward_Open [env: ETHERNETIPCTL_IO_ADDRESS] |
+| `--key string` |  | Electronic key put first in the connection path, as vendor/device-type/product-code/major.minor (decimal or 0x hex; 0 leaves a field unchecked), e.g. 1/12/65001/2.3: a target that is not that device refuses the connection |
+| `--key-compatible` |  | Set the compatibility bit of --key: a target with the same major and a minor revision at or above the key's is accepted |
 | `--large` |  | Use Large_Forward_Open (chosen anyway for sizes above 511 octets) |
 | `--multicast` |  | Ask for the input (T->O) data by multicast |
+| `--multicast-interface string` |  | Interface the multicast group is joined on, by name (eth1) or IPv4 address (default: the system's choice); needs --multicast and an --io-address that is not one unicast address |
 | `--output uint32` |  | O->T connection point: the output assembly (or a heartbeat point for input-only and listen-only connections) |
 | `--output-data string` |  | Output data to send, as hex (--output-size octets; default zeros); needs --yes |
 | `--output-size uint16` |  | Size of the output (O->T) data in octets, without sequence count and run/idle header; 0 for a heartbeat |
 | `--rpi duration` |  | Requested packet interval of both directions, e.g. 10ms |
+| `--route string` |  | Route through the target to another device, as port/link pairs, comma-separated: 1/0 is slot 0 of the backplane, 1/0,2/192.168.1.10 then port 2 to that address (only from the command line: a change does not take ETHERNETIPCTL_ROUTE) |
 | `--timeout-multiplier uint8` |  | The connection times out after RPI x 4 << multiplier (0-7) |
 | `--yes` |  | Confirm that the connection writes output data (--output-size above 0) or --config-data: without it nothing is sent |
 

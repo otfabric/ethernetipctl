@@ -7,6 +7,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/otfabric/ethernetipctl/internal/cli"
 	"github.com/otfabric/ethernetipctl/internal/config"
 	"github.com/otfabric/ethernetipctl/internal/eip"
 	"github.com/otfabric/ethernetipctl/internal/format"
@@ -134,7 +135,12 @@ their outputs in their idle state. An input-only connection (--output the heartb
 --output-size 0) without --config-data writes nothing and needs no --yes.
 
 The I/O endpoint listens on UDP --io-address (default :2222, the port targets send to); a
-port other than 2222 is announced to the target in the Forward_Open.`,
+port other than 2222 is announced to the target in the Forward_Open. With --multicast the
+group is joined on the system's choice of interface, or on --multicast-interface. --key
+puts an electronic key first in the connection path: a target that is another device
+refuses the connection. --route reaches a device behind the target (a module in its
+chassis), and is taken only from the command line, as for the other commands that change
+a device.`,
 		Example: `
   # Input only: watch input assembly 100 through heartbeat point 152
   ethernetipctl io 192.168.1.10 --config 151 --output 152 --input 100 --input-size 32 --rpi 50ms
@@ -147,8 +153,9 @@ port other than 2222 is announced to the target in the Forward_Open.`,
 		Args: cobra.ExactArgs(1),
 	}
 	cfg := config.IOConfig{}
-	runner.RegisterCommandCfg(cmd, &cfg)
+	runner.RegisterCommandCfg(cmd, &cfg, cli.RouteFromFlagOnly)
 	cmd.RunE = func(cmd *cobra.Command, args []string) error {
+		cli.NoteEnvRouteNotUsed(cmd)
 		e := Env(cmd, g)
 		return runner.RunStream(cmd, g.OutputFormat,
 			func() error {

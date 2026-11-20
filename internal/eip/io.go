@@ -7,6 +7,9 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"net"
+	"net/netip"
+	"strings"
 	"sync"
 	"time"
 
@@ -24,6 +27,12 @@ const DefaultIOAddress = ":2222"
 // CheckIO validates `io` before anything is sent, and returns the output data.
 func CheckIO(cfg config.IOConfig) ([]byte, error) {
 	if _, err := checkIO(cfg.IOConnConfig); err != nil {
+		return nil, err
+	}
+	if _, err := multicastInterface(cfg); err != nil {
+		return nil, err
+	}
+	if _, err := ParseRoute(cfg.Route); err != nil {
 		return nil, err
 	}
 	switch {
@@ -143,7 +152,11 @@ func (e Env) IO(ctx context.Context, host string, cfg config.IOConfig, write fun
 		return 0, err
 	}
 	configData, _ := checkIO(cfg.IOConnConfig)
-	c, err := e.dial(ctx, t, nil)
+	route, err := ParseRoute(cfg.Route)
+	if err != nil {
+		return 0, err
+	}
+	c, err := e.dial(ctx, t, route)
 	if err != nil {
 		return 0, err
 	}
@@ -162,7 +175,9 @@ func (e Env) IO(ctx context.Context, host string, cfg config.IOConfig, write fun
 		cancel()
 	}()
 	smp := &sampler{changes: cfg.Changes, notify: make(chan struct{}, 1)}
-	ioc, err := sc.Open(ctx, scannerConfig(cfg, out, configData, smp.input))
+	sCfg := scannerConfig(cfg, out, configData, smp.input)
+	sCfg.MulticastInterface, _ = multicastInterface(cfg)
+	ioc, err := sc.Open(ctx, sCfg)
 	if err != nil {
 		return 0, WrapError(err)
 	}
@@ -248,8 +263,46 @@ func scannerConfig(cfg config.IOConfig, out, configData []byte, onInput func([]b
 		Idle:    cfg.Idle,
 		OnInput: onInput,
 	}
+	sc.Key, _ = electronicKey(cfg.IOConnConfig)
 	if cfg.OutputSize > 0 {
 		sc.Output = out
 	}
 	return sc
+}
+
+// multicastInterface resolves --multicast-interface: an interface name, or an IPv4
+// address of one. nil without the flag.
+func multicastInterface(cfg config.IOConfig) (*net.Interface, error) {
+	name := strings.TrimSpace(cfg.MulticastInterface)
+	if name == "" {
+		return nil, nil
+	}
+	if !cfg.Multicast {
+		return nil, invalid(errs.CodeInvalidInput, "--multicast-interface needs --multicast")
+	}
+	if ip, err := netip.ParseAddr(name); err == nil {
+		if !ip.Is4() {
+			return nil, invalid(errs.CodeInvalidValue, "invalid --multicast-interface %s: an IPv4 address or an interface name", name)
+		}
+		ifs, err := net.Interfaces()
+		if err != nil {
+			return nil, invalid(errs.CodeInvalidValue, "invalid --multicast-interface %s: %v", name, err)
+		}
+		for i := range ifs {
+			addrs, _ := ifs[i].Addrs()
+			for _, a := range addrs {
+				if n, ok := a.(*net.IPNet); ok {
+					if got, ok := netip.AddrFromSlice(n.IP); ok && got.Unmap() == ip {
+						return &ifs[i], nil
+					}
+				}
+			}
+		}
+		return nil, invalid(errs.CodeInvalidValue, "invalid --multicast-interface %s: no interface has this address", name)
+	}
+	ifi, err := net.InterfaceByName(name)
+	if err != nil {
+		return nil, invalid(errs.CodeInvalidValue, "invalid --multicast-interface %s: no such interface", name)
+	}
+	return ifi, nil
 }

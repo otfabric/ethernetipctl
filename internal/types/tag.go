@@ -260,7 +260,8 @@ type AdapterEvent struct {
 	// Timestamp is when the event happened (RFC 3339, UTC, milliseconds).
 	Timestamp string `json:"timestamp"`
 	// Event is "listening", "connected", "disconnected", "request",
-	// "connection-opened", "connection-closed", "assembly-write", "tag-write", "reset",
+	// "connection-opened", "connection-closed", "assembly-write", "tag-write",
+	// "tag-refused" (a read or write the tag's access refuses: Service and Status), "reset",
 	// "stopping", or "dropped" (events left out while stdout did not keep up; Detail
 	// gives their number).
 	Event    string      `json:"event"`

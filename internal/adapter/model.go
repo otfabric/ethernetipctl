@@ -6,6 +6,7 @@ package adapter
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -61,6 +62,10 @@ type Logix struct {
 	ProgramName string     `json:"program_name,omitempty" yaml:"program_name,omitempty"`
 	Templates   []Template `json:"templates,omitempty" yaml:"templates,omitempty"`
 	Tags        []Tag      `json:"tags" yaml:"tags"`
+	// AccessStatus is the general status a read or write refused by a tag's Access is
+	// answered with; 0 means 0x0F (privilege violation). Which status a Logix
+	// controller answers for a tag's External Access is not taken from a recording.
+	AccessStatus uint8 `json:"access_status,omitempty" yaml:"access_status,omitempty"`
 }
 
 // Template is a structure (UDT) definition.
@@ -95,6 +100,72 @@ type Tag struct {
 	// Value is the initial value: one value per element, comma-separated (one text for a
 	// STRING).
 	Value string `json:"value,omitempty" yaml:"value,omitempty"`
+	// Access is what originators may do with the tag: "read-write" (the default),
+	// "read-only" (writes refused) or "none" (reads and writes refused), as Logix's
+	// External Access. The tag list names the tag either way.
+	Access string `json:"access,omitempty" yaml:"access,omitempty"`
+}
+
+// Tag access, as Tag.Access gives it.
+const (
+	accessReadWrite = "read-write"
+	accessReadOnly  = "read-only"
+	accessNone      = "none"
+)
+
+// DefaultAccessStatus answers a read or write a tag's access refuses: privilege violation.
+const DefaultAccessStatus = cip.GeneralStatus(0x0F)
+
+// accessOf returns the access of t: read-write, read-only or none.
+func accessOf(t Tag) (string, error) {
+	switch a := strings.ToLower(strings.TrimSpace(t.Access)); a {
+	case "", accessReadWrite:
+		return accessReadWrite, nil
+	case accessReadOnly, accessNone:
+		return a, nil
+	default:
+		return "", fmt.Errorf("tag %s: access %q: read-write, read-only or none", t.Name, t.Access)
+	}
+}
+
+// Refused reports a read ("read") or write ("write") of a tag its access refused.
+type Refused func(service, tag string, status cip.GeneralStatus)
+
+// installAccess makes ts refuse what the tags' access does not allow, reporting each
+// refusal to refused. Tags are matched by name without regard to case, as Logix does.
+func (l *Logix) installAccess(ts *logix.TagServer, refused Refused) error {
+	access := map[string]string{}
+	for _, t := range l.Tags {
+		a, err := accessOf(t)
+		if err != nil {
+			return err
+		}
+		if a != accessReadWrite {
+			access[strings.ToLower(t.Name)] = a
+		}
+	}
+	if len(access) == 0 {
+		return nil
+	}
+	status := DefaultAccessStatus
+	if l.AccessStatus != 0 {
+		status = cip.GeneralStatus(l.AccessStatus)
+	}
+	ts.CheckRead(func(name string) cip.GeneralStatus {
+		if access[strings.ToLower(name)] == accessNone {
+			refused("read", name, status)
+			return status
+		}
+		return cip.StatusSuccess
+	})
+	ts.CheckWrite(func(_ context.Context, name string, _ logix.Value) cip.GeneralStatus {
+		if access[strings.ToLower(name)] != "" {
+			refused("write", name, status)
+			return status
+		}
+		return cip.StatusSuccess
+	})
+	return nil
 }
 
 // DefaultIdentity is the identity of an adapter without one.
@@ -305,6 +376,9 @@ func (l *Logix) check() (int64, error) {
 	}
 	total := int64(0)
 	for _, t := range l.Tags {
+		if _, err := accessOf(t); err != nil {
+			return 0, err
+		}
 		total += tagSize(t, sizes)
 		if total > maxModelData {
 			break

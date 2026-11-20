@@ -86,12 +86,14 @@ An emulated Rockwell Logix tag database (vendor specific, not CIP) for the `tag`
 | Field | Meaning |
 |-------|---------|
 | `program_name` | The project name the Program Name object reports (default `OTFabric`) |
+| `access_status` | The general status a refused read or write is answered with (default `0x0F`, privilege violation). Which status a Logix controller answers is not taken from a recording: set the one your client expects |
 | `templates` | Structure (UDT) definitions: `id` (1 to 0x0FFF), `name`, `handle` (unique), `size` in octets, `members` |
 | `templates[].members` | `name`, `type` (an atomic type, `STRING`, or `struct` with `template`), `array` (the length of an array member), `bit` (the bit of a BOOL member in the octet at `offset`: 0 to 7), `offset` |
-| `tags` | `name` (controller scope, an I/O module's tag such as `Local:1:I`, or `Program:<name>.<tag>`), `type` (`BOOL`, `SINT`, `INT`, `DINT`, `LINT`, `USINT`, `UINT`, `UDINT`, `ULINT`, `REAL`, `LREAL`, `BYTE`, `WORD`, `DWORD`, `LWORD`, `STRING`, or `struct` with `template`), `dims` (up to three array dimensions), `value` |
+| `tags` | `name` (controller scope, an I/O module's tag such as `Local:1:I`, or `Program:<name>.<tag>`), `type` (`BOOL`, `SINT`, `INT`, `DINT`, `LINT`, `USINT`, `UINT`, `UDINT`, `ULINT`, `REAL`, `LREAL`, `BYTE`, `WORD`, `DWORD`, `LWORD`, `STRING`, or `struct` with `template`), `dims` (up to three array dimensions), `value`, `access` |
+| `tags[].access` | What originators may do with the tag, as a Logix tag's External Access: `read-write` (the default), `read-only` (writes refused) or `none` (reads and writes refused). The tag list names the tag either way |
 | `tags[].value` | The initial value: one value per element, comma-separated (decimal or 0x-prefixed hex for integers); for `STRING` the text, several separated by `\|` for an array. A structure tag starts zeroed |
 
-A Logix BOOL member is a bit of a hidden host member, as the controllers lay them out: declare the host (`SINT` at the same offset) as in the example. Every write of a tag by an originator is logged as a `tag-write` event.
+A Logix BOOL member is a bit of a hidden host member, as the controllers lay them out: declare the host (`SINT` at the same offset) as in the example. Every write of a tag by an originator is logged as a `tag-write` event; every read or write its `access` refuses as a `tag-refused` event (`service` read or write, `tag`, `status`), with no `tag-write`.
 
 ### Bounds
 
@@ -99,7 +101,7 @@ Besides the bounds of each field (an assembly of at most 65000 octets; a tag of 
 
 ## Events
 
-The adapter writes one record per event to stdout (`--format text`, `json` for JSON Lines, or `table`): `listening` (with the TCP, UDP and I/O addresses), `connected` and `disconnected` (TCP sessions), `request` (every explicit request and its status, with `--requests`), `connection-opened` and `connection-closed` (CIP connections, with their IDs, triad and path), `assembly-write`, `tag-write`, `reset`, `stopping`. Up to 1024 events wait for stdout; while stdout does not keep up the adapter goes on serving, the events beyond those are left out, and a `dropped` event gives their number once there is room again (or at the end). See [json-output.md](json-output.md#streams).
+The adapter writes one record per event to stdout (`--format text`, `json` for JSON Lines, or `table`): `listening` (with the TCP, UDP and I/O addresses), `connected` and `disconnected` (TCP sessions), `request` (every explicit request and its status, with `--requests`), `connection-opened` and `connection-closed` (CIP connections, with their IDs, triad and path), `assembly-write`, `tag-write`, `tag-refused`, `reset`, `stopping`. Up to 1024 events wait for stdout; while stdout does not keep up the adapter goes on serving, the events beyond those are left out, and a `dropped` event gives their number once there is room again (or at the end). See [json-output.md](json-output.md#streams).
 
 ## Listening
 

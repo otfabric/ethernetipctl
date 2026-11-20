@@ -6,6 +6,8 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"net"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -186,5 +188,42 @@ func TestScannerConfigStartsWithOutputAndIdle(t *testing.T) {
 	}
 	if sc := scannerConfig(config.IOConfig{}, []byte{}, nil, nil); sc.Output != nil {
 		t.Errorf("no output: Output %x", sc.Output)
+	}
+}
+
+// TestMulticastInterfaceResolves: --multicast-interface by name and by an IPv4 address of
+// the interface give the same interface; nothing is joined, so it runs everywhere.
+func TestMulticastInterfaceResolves(t *testing.T) {
+	ifs, _ := net.Interfaces()
+	for i := range ifs {
+		addrs, _ := ifs[i].Addrs()
+		for _, a := range addrs {
+			n, ok := a.(*net.IPNet)
+			if !ok || n.IP.To4() == nil {
+				continue
+			}
+			for _, name := range []string{ifs[i].Name, n.IP.String()} {
+				got, err := multicastInterface(config.IOConfig{IOConnConfig: config.IOConnConfig{Multicast: true}, MulticastInterface: " " + name + " "})
+				if err != nil || got == nil || got.Index != ifs[i].Index {
+					t.Errorf("%s: %+v, %v", name, got, err)
+				}
+			}
+			return
+		}
+	}
+	t.Skip("no interface with an IPv4 address")
+}
+
+// TestCheckIOKeyAndPathSize: the key counts in the 255 words of the connection path.
+func TestCheckIOKeyAndPathSize(t *testing.T) {
+	c := config.IOConnConfig{ConnectionPathConfig: config.ConnectionPathConfig{Output: 150, Input: 100}, RPI: time.Millisecond}
+	// The path of the points (5 words plus the data segment's 1) and 248 words of data: 254.
+	c.ConfigData = strings.Repeat("00", 2*248)
+	if _, err := checkIO(c); err != nil {
+		t.Fatalf("without a key: %v", err)
+	}
+	c.Key = "1/12/42/3.7"
+	if _, err := checkIO(c); err == nil || !strings.Contains(err.Error(), "with --key") {
+		t.Fatalf("with a key: %v", err)
 	}
 }

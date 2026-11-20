@@ -12,6 +12,7 @@ import (
 	"testing"
 
 	ethernetip "github.com/otfabric/go-ethernetip"
+	"github.com/otfabric/go-ethernetip/cip"
 
 	"github.com/otfabric/ethernetipctl/internal/config"
 	"github.com/otfabric/ethernetipctl/internal/errs"
@@ -180,5 +181,22 @@ func TestModelUnsignedValues(t *testing.T) {
 		if got != c.want {
 			t.Errorf("%s %s: %x, want %x", c.typ, c.value, v.Data, c.want)
 		}
+	}
+}
+
+// TestInstallAccessRefusesUnknownAccess: an access that is none of the three is an error
+// when the checks are installed, too (Check refuses it first in the adapter).
+func TestInstallAccessRefusesUnknownAccess(t *testing.T) {
+	l := &Logix{Tags: []Tag{{Name: "X", Type: "DINT", Access: "write-only"}}}
+	ts, err := (&Logix{Tags: []Tag{{Name: "X", Type: "DINT"}}}).buildTagServer()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := l.installAccess(ts, func(string, string, cip.GeneralStatus) {}); err == nil || !strings.Contains(err.Error(), "write-only") {
+		t.Errorf("installAccess: %v", err)
+	}
+	// Every tag read-write: no checks are installed.
+	if err := (&Logix{Tags: []Tag{{Name: "X", Access: "READ-WRITE"}}}).installAccess(ts, nil); err != nil {
+		t.Error(err)
 	}
 }
