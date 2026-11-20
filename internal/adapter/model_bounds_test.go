@@ -184,19 +184,19 @@ func TestModelUnsignedValues(t *testing.T) {
 	}
 }
 
-// TestInstallAccessRefusesUnknownAccess: an access that is none of the three is an error
-// when the checks are installed, too (Check refuses it first in the adapter).
-func TestInstallAccessRefusesUnknownAccess(t *testing.T) {
-	l := &Logix{Tags: []Tag{{Name: "X", Type: "DINT", Access: "write-only"}}}
-	ts, err := (&Logix{Tags: []Tag{{Name: "X", Type: "DINT"}}}).buildTagServer()
-	if err != nil {
-		t.Fatal(err)
+// TestInstallAccessUnrestricted: a model whose tags are all read-write, or whose access
+// does not parse, restricts nothing; the model's check is what refuses an access that
+// does not parse. TestAdapterTagAccess (cmd) covers the refusals through the server.
+func TestInstallAccessUnrestricted(t *testing.T) {
+	for _, access := range []string{"READ-WRITE", "", "write-only"} {
+		l := &Logix{Tags: []Tag{{Name: "X", Type: "DINT", Access: access}}}
+		ts, err := (&Logix{Tags: []Tag{{Name: "X", Type: "DINT"}}}).buildTagServer()
+		if err != nil {
+			t.Fatal(err)
+		}
+		l.installAccess(ts, func(service, name string, _ cip.GeneralStatus) { t.Errorf("%q: %s %s refused", access, service, name) })
 	}
-	if err := l.installAccess(ts, func(string, string, cip.GeneralStatus) {}); err == nil || !strings.Contains(err.Error(), "write-only") {
-		t.Errorf("installAccess: %v", err)
-	}
-	// Every tag read-write: no checks are installed.
-	if err := (&Logix{Tags: []Tag{{Name: "X", Access: "READ-WRITE"}}}).installAccess(ts, nil); err != nil {
-		t.Error(err)
+	if _, err := resolveModel(t, modelIdentity+"logix:\n  tags: [{name: X, type: DINT, access: write-only}]\n"); err == nil || !strings.Contains(err.Error(), "write-only") {
+		t.Errorf("the check: %v", err)
 	}
 }

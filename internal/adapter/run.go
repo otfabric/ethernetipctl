@@ -292,11 +292,9 @@ func build(m *Model, cfg *config.AdapterConfig, logger ethernetip.Logger, e *emi
 			return nil, errs.InvalidInput(errs.CodeInvalidConfig, fmt.Sprintf("invalid logix model: %v", err), err)
 		}
 		ts.OnWrite(func(name string) { e.emit(types.AdapterEvent{Event: "tag-write", Tag: name}) })
-		if err := m.Logix.installAccess(ts, func(service, name string, st cip.GeneralStatus) {
+		m.Logix.installAccess(ts, func(service, name string, st cip.GeneralStatus) {
 			e.emit(types.AdapterEvent{Event: "tag-refused", Service: service, Tag: name, Status: fmt.Sprintf("0x%02X %s", uint8(st), st)})
-		}); err != nil {
-			return nil, errs.InvalidInput(errs.CodeInvalidConfig, fmt.Sprintf("invalid logix model: %v", err), err)
-		}
+		})
 		ts.Attach(srv)
 	}
 	return srv, nil

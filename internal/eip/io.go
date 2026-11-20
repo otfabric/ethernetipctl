@@ -152,10 +152,7 @@ func (e Env) IO(ctx context.Context, host string, cfg config.IOConfig, write fun
 		return 0, err
 	}
 	configData, _ := checkIO(cfg.IOConnConfig)
-	route, err := ParseRoute(cfg.Route)
-	if err != nil {
-		return 0, err
-	}
+	route, _ := ParseRoute(cfg.Route) // CheckIO checked it
 	c, err := e.dial(ctx, t, route)
 	if err != nil {
 		return 0, err
@@ -284,17 +281,13 @@ func multicastInterface(cfg config.IOConfig) (*net.Interface, error) {
 		if !ip.Is4() {
 			return nil, invalid(errs.CodeInvalidValue, "invalid --multicast-interface %s: an IPv4 address or an interface name", name)
 		}
-		ifs, err := net.Interfaces()
-		if err != nil {
-			return nil, invalid(errs.CodeInvalidValue, "invalid --multicast-interface %s: %v", name, err)
-		}
+		// An interface's addresses read as prefixes, 192.168.1.20/24.
+		ifs, _ := net.Interfaces()
 		for i := range ifs {
 			addrs, _ := ifs[i].Addrs()
 			for _, a := range addrs {
-				if n, ok := a.(*net.IPNet); ok {
-					if got, ok := netip.AddrFromSlice(n.IP); ok && got.Unmap() == ip {
-						return &ifs[i], nil
-					}
+				if strings.HasPrefix(a.String(), ip.String()+"/") {
+					return &ifs[i], nil
 				}
 			}
 		}

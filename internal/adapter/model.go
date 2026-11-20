@@ -133,19 +133,17 @@ type Refused func(service, tag string, status cip.GeneralStatus)
 
 // installAccess makes ts refuse what the tags' access does not allow, reporting each
 // refusal to refused. Tags are matched by name without regard to case, as Logix does.
-func (l *Logix) installAccess(ts *logix.TagServer, refused Refused) error {
+// The model's check has refused an access that does not parse; such a tag is not
+// restricted here.
+func (l *Logix) installAccess(ts *logix.TagServer, refused Refused) {
 	access := map[string]string{}
 	for _, t := range l.Tags {
-		a, err := accessOf(t)
-		if err != nil {
-			return err
-		}
-		if a != accessReadWrite {
+		if a, err := accessOf(t); err == nil && a != accessReadWrite {
 			access[strings.ToLower(t.Name)] = a
 		}
 	}
 	if len(access) == 0 {
-		return nil
+		return
 	}
 	status := DefaultAccessStatus
 	if l.AccessStatus != 0 {
@@ -165,7 +163,6 @@ func (l *Logix) installAccess(ts *logix.TagServer, refused Refused) error {
 		}
 		return cip.StatusSuccess
 	})
-	return nil
 }
 
 // DefaultIdentity is the identity of an adapter without one.
