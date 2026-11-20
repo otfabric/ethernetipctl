@@ -1,5 +1,28 @@
 # ethernetipctl Releases
 
+## v0.10.1
+
+**Date:** 2026-11-20
+**Previous release:** v0.10.0
+
+## Summary
+
+A patch release on v0.10.0: two help texts, the rule of table output, and a test. No flag, JSON output or exit code changes.
+
+## Changes
+
+### Fixes
+
+- **adapter**: the help of `--assembly` says `instance:kind[:size]`, as the parser takes it (without a size the assembly holds no data, as the heartbeat points); it said `instance:kind:size`.
+- **--timeout**: its help says that 0 is 5 seconds, as the commands treat it.
+- **--format table**: the rule under the headers is as wide as each header (`-------`). It was one `-` per column, which reads as an empty cell, the marker of a missing value (`tag list` showed a row `-  -  -  -`).
+
+### Tests
+
+- `TestForwardCloseTable`: `forward-close --format table` names the target, the triad and the path under its rule; `TestWrite` takes the new rule.
+
+---
+
 ## v0.10.0
 
 **Date:** 2026-11-20

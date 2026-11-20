@@ -18,9 +18,11 @@ func RenderTable(m TableMarshaler) (string, error) {
 	var b strings.Builder
 	tw := tabwriter.NewWriter(&b, 0, 0, 2, ' ', 0)
 	_, _ = fmt.Fprintln(tw, strings.Join(headers, "\t"))
+	// The rule under each header is as wide as the header: a lone "-" reads as an empty
+	// cell, the marker of a missing value.
 	rule := make([]string, len(headers))
-	for i := range rule {
-		rule[i] = "-"
+	for i, h := range headers {
+		rule[i] = strings.Repeat("-", max(len(h), 1))
 	}
 	_, _ = fmt.Fprintln(tw, strings.Join(rule, "\t"))
 	for _, row := range rows {

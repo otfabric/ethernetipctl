@@ -11,7 +11,7 @@ Usage: `ethernetipctl [command]`
 | `--debug` |  | Log go-ethernetip's protocol trace to stderr, and show the causes of an error |
 | `--format string` |  | Output format: text, json, or table [env: ETHERNETIPCTL_FORMAT] (default "text") |
 | `--port uint16` |  | Port of the target when the host names none (44818) [env: ETHERNETIPCTL_PORT] (default 44818) |
-| `--timeout duration` |  | Timeout of connecting and of each request (e.g. 500ms, 5s) [env: ETHERNETIPCTL_TIMEOUT] (default 5s) |
+| `--timeout duration` |  | Timeout of connecting and of each request (e.g. 500ms, 5s; 0 = 5s) [env: ETHERNETIPCTL_TIMEOUT] (default 5s) |
 
 Subcommands: `adapter`, `assembly`, `completion`, `connections`, `diagnose`, `discover`, `eds`, `forward-close`, `forward-open`, `help`, `identify`, `interfaces`, `io`, `object`, `objects`, `read`, `reset`, `services`, `session`, `status`, `tag`, `version`, `write`
 
@@ -23,7 +23,7 @@ Usage: `ethernetipctl adapter [flags]`
 
 | Flag | Short | Meaning |
 |---|---|---|
-| `--assembly strings` |  | Assembly as instance:kind:size, kinds input, output, config, input-only, listen-only (replaces the default set) |
+| `--assembly strings` |  | Assembly as instance:kind[:size], repeatable, kinds input, output, config, input-only, listen-only; without a size it holds no data, as the heartbeat points input-only and listen-only (replaces the default set) |
 | `--config string` |  | Adapter model file (YAML or JSON); without it the flags describe the adapter [env: ETHERNETIPCTL_ADAPTER_CONFIG] |
 | `--duration duration` |  | Stop after this long (0 = until interrupted) |
 | `--echo` |  | Copy the data written to each output assembly to the input assembly of the same size with the lowest instance |
