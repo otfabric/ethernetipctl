@@ -6,9 +6,14 @@ import (
 	"bytes"
 	"context"
 	"encoding/hex"
+	"net"
+	"net/netip"
 	"strings"
 	"sync"
 	"testing"
+	"time"
+
+	"github.com/otfabric/go-ethernetip/implicit"
 )
 
 // ioArgs are the flags of an I/O connection to the fixture, with a free I/O port.
@@ -212,4 +217,143 @@ func TestIOStartsWithOutputAndRunState(t *testing.T) {
 		}
 		mu.Unlock()
 	}
+}
+
+// TestIOMulticastInterfaceRefused: --multicast-interface needs --multicast and an
+// interface of this host, by name or IPv4 address; refused before anything is sent.
+func TestIOMulticastInterfaceRefused(t *testing.T) {
+	f := startFixture(t)
+	for _, extra := range [][]string{
+		{"--multicast-interface", "lo0"},
+		{"--multicast", "--multicast-interface", "no-such-interface-x"},
+		{"--multicast", "--multicast-interface", "::1"},
+		{"--multicast", "--multicast-interface", "192.0.2.254"},
+	} {
+		f.run(t, ioArgs("152", "0", extra...)...).want(t, 3).errHas(t, "--multicast")
+	}
+	if n := len(f.srv.Connections()); n != 0 {
+		t.Errorf("%d connections opened", n)
+	}
+}
+
+// TestIOMulticastInterface: inputs by multicast arrive on the interface the flag names,
+// the loopback one here, by name and by address, where the system's choice is another.
+func TestIOMulticastInterface(t *testing.T) {
+	lo := loopbackMulticast(t)
+	f := startFixture(t)
+	must(t, f.in.SetData(bytes.Repeat([]byte{0x5C}, 32)))
+	for _, ifname := range []string{lo.Name, "127.0.0.1"} {
+		args := ioArgs("152", "0", "--multicast", "--multicast-interface", ifname, "--duration", "300ms", "--format", "json")
+		args = append(args, "--io-address", "0.0.0.0:0") // the last one wins
+		r := f.run(t, args...).want(t, 0)
+		lines := jsonLines(t, r.stdout)
+		if len(lines) == 0 {
+			t.Errorf("%s: no sample\n%s", ifname, r.stderr)
+		}
+		for _, l := range lines {
+			if l["data"] != strings.Repeat("5c", 32) {
+				t.Errorf("%s: sample %v", ifname, l)
+			}
+		}
+	}
+}
+
+// loopbackMulticast returns the loopback interface where multicast works on it: a group
+// joined there receives what an endpoint bound to 127.0.0.1 sends to it. Skips the test
+// elsewhere (Linux runners often have no multicast on lo).
+func loopbackMulticast(t *testing.T) *net.Interface {
+	t.Helper()
+	var lo *net.Interface
+	ifs, _ := net.Interfaces()
+	for i := range ifs {
+		if ifs[i].Flags&net.FlagLoopback != 0 && ifs[i].Flags&net.FlagUp != 0 {
+			lo = &ifs[i]
+			break
+		}
+	}
+	if lo == nil {
+		t.Skip("no loopback interface")
+	}
+	group := netip.MustParseAddr("239.192.254.77")
+	rx, err := implicit.Listen("0.0.0.0:0", implicit.WithMulticastInterface(lo))
+	if err != nil {
+		t.Skipf("loopback multicast: %v", err)
+	}
+	defer func() { _ = rx.Close() }()
+	tx, err := implicit.Listen("127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = tx.Close() }()
+	got := make(chan struct{}, 1)
+	in, err := rx.Open(implicit.Config{ConsumedID: 1, Group: group, OnData: func([]byte, bool) {
+		select {
+		case got <- struct{}{}:
+		default:
+		}
+	}})
+	if err != nil {
+		t.Skipf("loopback multicast: %v", err)
+	}
+	defer in.Close()
+	out, err := tx.Open(implicit.Config{ProducedID: 1, ProduceRPI: 10 * time.Millisecond,
+		Destination: netip.AddrPortFrom(group, rx.LocalAddr().Port())})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer out.Close()
+	select {
+	case <-got:
+		return lo
+	case <-time.After(time.Second):
+		t.Skip("multicast is not delivered on the loopback interface here")
+		return nil
+	}
+}
+
+// TestIOAndForwardOpenElectronicKey: --key goes first in the connection path; the target
+// accepts its own key, a key with fields at 0, and a compatible one with a lower minor,
+// and refuses another device's (exit 6, the connection manager's status).
+func TestIOAndForwardOpenElectronicKey(t *testing.T) {
+	f := startFixture(t) // vendor 1, device type 12, product 42, revision 3.7
+	open := func(extra ...string) []string {
+		return append([]string{"forward-open", "ADDR", "--output", "152", "--input", "100", "--input-size", "32", "--rpi", "100ms", "--format", "json"}, extra...)
+	}
+	m := f.run(t, open("--key", "1/12/42/3.7")...).want(t, 0).json(t)
+	if p := m["connection"].(map[string]any)["path"].(string); !strings.HasPrefix(p, "[key 1/12/42 3.7") {
+		t.Errorf("path %s", p)
+	}
+	f.run(t, open("--key", "0/0/0/0.0")...).want(t, 0)
+	f.run(t, open("--key", "0x1/0xC/42/3.5", "--key-compatible")...).want(t, 0)
+	f.run(t, open("--key", "1/12/42/3.5")...).want(t, 6)
+	f.run(t, open("--key", "7/12/42/3.7")...).want(t, 6).has(t, "0x0114 (vendor ID or product code mismatch)")
+	f.run(t, open("--key", "1/13/42/3.7")...).want(t, 6).has(t, "0x0115")
+	f.run(t, ioArgs("152", "0", "--key", "1/12/42/3.7", "--count", "1")...).want(t, 0).errHas(t, "[key 1/12/42 3.7")
+	f.run(t, ioArgs("152", "0", "--key", "1/12/43/3.7", "--count", "1")...).want(t, 6)
+	for _, bad := range [][]string{
+		{"--key", "1/12/42"},
+		{"--key", "1/12/42/3"},
+		{"--key", "1/12/42/128.0"},
+		{"--key", "1/12/65536/3.7"},
+		{"--key", "a/12/42/3.7"},
+		{"--key-compatible"},
+	} {
+		f.run(t, open(bad...)...).want(t, 3)
+		f.run(t, ioArgs("152", "0", bad...)...).want(t, 3)
+	}
+	if n := len(f.srv.Connections()); n != 0 {
+		t.Errorf("%d connections left open", n)
+	}
+}
+
+// TestIORoute: io takes --route, as forward-open does, and only from the command line:
+// ETHERNETIPCTL_ROUTE is not used, and one line on stderr says so.
+func TestIORoute(t *testing.T) {
+	f := startFixture(t)
+	f.run(t, ioArgs("152", "0", "--route", "1/0", "--count", "1")...).want(t, 0)
+	f.run(t, ioArgs("152", "0", "--route", "1/2", "--count", "1")...).want(t, 6)
+	f.run(t, ioArgs("152", "0", "--route", "x/y", "--count", "1")...).want(t, 3).errHas(t, "--route")
+	// The fixture has no port 2: the variable's route would be refused.
+	t.Setenv("ETHERNETIPCTL_ROUTE", "1/2")
+	f.run(t, ioArgs("152", "0", "--count", "1")...).want(t, 0).errHas(t, "ETHERNETIPCTL_ROUTE=1/2 is not used")
 }

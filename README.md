@@ -264,6 +264,15 @@ ethernetipctl io 192.168.1.10 --config 151 --output 152 --input 100 --input-size
 # Exclusive owner, writing outputs (needs --yes)
 ethernetipctl io 192.168.1.10 --config 151 --output 150 --input 100 --output-size 4 --input-size 32 --rpi 10ms --output-data 01000000 --yes
 
+# Inputs by multicast, joined on the interface facing the device (a laptop with two networks)
+ethernetipctl io 192.168.1.10 --config 151 --output 152 --input 100 --input-size 32 --rpi 20ms --multicast --multicast-interface eth1
+
+# Only if the target is this device (electronic key: vendor/device type/product code/major.minor)
+ethernetipctl io 192.168.1.10 --config 151 --output 152 --input 100 --input-size 32 --rpi 20ms --key 1/12/65001/2.3
+
+# A module behind the EtherNet/IP module of a chassis, slot 3 of the backplane
+ethernetipctl io 192.168.1.10 --config 151 --output 152 --input 100 --input-size 32 --rpi 20ms --route 1/3
+
 # Counters of the Connection Manager
 ethernetipctl connections 192.168.1.10
 ```
@@ -277,7 +286,7 @@ I/O connection to 127.0.0.1:44818 open: O->T 0xC05EC026, T->O 0xA7F38EEF, API 10
 1 sample(s) written; sent 4, received 4, dropped 0, duplicates 3; state connected
 ```
 
-The I/O endpoint listens on UDP 2222 (`--io-address`); a different port is announced to the device in the Forward_Open, which not every device honours. Up to 1024 samples (at most 4 MiB of data as hex) wait for stdout: when stdout is slower than the device, the oldest are dropped, the summary counts them and `seq` shows the gap. CIP cannot list another device's connections: `connections` shows its counters, and the simulated adapter logs every connection it opens and closes.
+The I/O endpoint listens on UDP 2222 (`--io-address`); a different port is announced to the device in the Forward_Open, which not every device honours. Multicast groups are joined on the system's choice of interface (the default route's) unless `--multicast-interface` names one; an `--io-address` bound to one unicast address receives no multicast on most systems. `--key` (with `--key-compatible` for the compatibility bit) puts an electronic key first in the connection path of `io` and `forward-open`: a field at 0 is not checked. `io` takes `--route` only from the command line, as the other commands that change a device do. Routed I/O has not been tried against a chassis. Up to 1024 samples (at most 4 MiB of data as hex) wait for stdout: when stdout is slower than the device, the oldest are dropped, the summary counts them and `seq` shows the gap. CIP cannot list another device's connections: `connections` shows its counters, and the simulated adapter logs every connection it opens and closes.
 
 ### Diagnose
 

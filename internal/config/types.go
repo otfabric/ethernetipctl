@@ -91,6 +91,8 @@ type IOConnConfig struct {
 	Large             bool          `desc:"Use Large_Forward_Open (chosen anyway for sizes above 511 octets)" flag:"large"`
 	TimeoutMultiplier uint8         `desc:"The connection times out after RPI x 4 << multiplier (0-7)" flag:"timeout-multiplier"`
 	ConfigData        string        `desc:"Configuration data sent in the connection path, as hex (an even number of octets); the target writes it to its configuration assembly, so it needs --yes" flag:"config-data"`
+	Key               string        `desc:"Electronic key put first in the connection path, as vendor/device-type/product-code/major.minor (decimal or 0x hex; 0 leaves a field unchecked), e.g. 1/12/65001/2.3: a target that is not that device refuses the connection" flag:"key"`
+	KeyCompatible     bool          `desc:"Set the compatibility bit of --key: a target with the same major and a minor revision at or above the key's is accepted" flag:"key-compatible"`
 }
 
 // TriadConfig is the connection triad that identifies a connection.
@@ -118,14 +120,18 @@ type ForwardCloseConfig struct {
 
 // IOConfig drives `io`.
 type IOConfig struct {
+	RouteConfig
 	IOConnConfig
-	IOAddress  string        `env:"ETHERNETIPCTL_IO_ADDRESS" desc:"Local UDP address of the I/O endpoint; a port other than 2222 is announced to the target in Forward_Open" flag:"io-address"`
-	Duration   time.Duration `desc:"Stop after this long (0 = until interrupted)" flag:"duration"`
-	Count      uint32        `desc:"Stop after this many input samples (0 = until interrupted)" flag:"count"`
-	Changes    bool          `desc:"Only write a sample when the input data or run state changes" flag:"changes"`
-	OutputData string        `desc:"Output data to send, as hex (--output-size octets; default zeros); needs --yes" flag:"output-data"`
-	Idle       bool          `desc:"Send the output in idle instead of run" flag:"idle"`
-	Yes        bool          `desc:"Confirm that the connection writes output data (--output-size above 0) or --config-data: without it nothing is sent" flag:"yes"`
+	IOAddress string `env:"ETHERNETIPCTL_IO_ADDRESS" desc:"Local UDP address of the I/O endpoint; a port other than 2222 is announced to the target in Forward_Open" flag:"io-address"`
+	// MulticastInterface is where --multicast joins the group: a name (eth1) or an IPv4
+	// address of the interface.
+	MulticastInterface string        `desc:"Interface the multicast group is joined on, by name (eth1) or IPv4 address (default: the system's choice); needs --multicast and an --io-address that is not one unicast address" flag:"multicast-interface"`
+	Duration           time.Duration `desc:"Stop after this long (0 = until interrupted)" flag:"duration"`
+	Count              uint32        `desc:"Stop after this many input samples (0 = until interrupted)" flag:"count"`
+	Changes            bool          `desc:"Only write a sample when the input data or run state changes" flag:"changes"`
+	OutputData         string        `desc:"Output data to send, as hex (--output-size octets; default zeros); needs --yes" flag:"output-data"`
+	Idle               bool          `desc:"Send the output in idle instead of run" flag:"idle"`
+	Yes                bool          `desc:"Confirm that the connection writes output data (--output-size above 0) or --config-data: without it nothing is sent" flag:"yes"`
 }
 
 // AssemblyConfig drives `assembly read` and `assembly write`.

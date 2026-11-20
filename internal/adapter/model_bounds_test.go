@@ -12,6 +12,7 @@ import (
 	"testing"
 
 	ethernetip "github.com/otfabric/go-ethernetip"
+	"github.com/otfabric/go-ethernetip/cip"
 
 	"github.com/otfabric/ethernetipctl/internal/config"
 	"github.com/otfabric/ethernetipctl/internal/errs"
@@ -180,5 +181,22 @@ func TestModelUnsignedValues(t *testing.T) {
 		if got != c.want {
 			t.Errorf("%s %s: %x, want %x", c.typ, c.value, v.Data, c.want)
 		}
+	}
+}
+
+// TestInstallAccessUnrestricted: a model whose tags are all read-write, or whose access
+// does not parse, restricts nothing; the model's check is what refuses an access that
+// does not parse. TestAdapterTagAccess (cmd) covers the refusals through the server.
+func TestInstallAccessUnrestricted(t *testing.T) {
+	for _, access := range []string{"READ-WRITE", "", "write-only"} {
+		l := &Logix{Tags: []Tag{{Name: "X", Type: "DINT", Access: access}}}
+		ts, err := (&Logix{Tags: []Tag{{Name: "X", Type: "DINT"}}}).buildTagServer()
+		if err != nil {
+			t.Fatal(err)
+		}
+		l.installAccess(ts, func(service, name string, _ cip.GeneralStatus) { t.Errorf("%q: %s %s refused", access, service, name) })
+	}
+	if _, err := resolveModel(t, modelIdentity+"logix:\n  tags: [{name: X, type: DINT, access: write-only}]\n"); err == nil || !strings.Contains(err.Error(), "write-only") {
+		t.Errorf("the check: %v", err)
 	}
 }

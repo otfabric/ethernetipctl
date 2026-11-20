@@ -1,5 +1,32 @@
 # ethernetipctl Releases
 
+## v0.10.0
+
+**Date:** 2026-11-20
+**Previous release:** v0.9.2
+
+## Summary
+
+Four additions from a review of the CLI: three flags of `io` (`--multicast-interface`, `--route`, `--key` with `--key-compatible`, the last also on `forward-open`) and tag access in the adapter's model. Built on go-ethernetip v0.9.0, as v0.9.2. No flag is removed or changed and no exit code is added or redefined; the JSON output gains the adapter's `tag-refused` event.
+
+## Changes
+
+### Additions
+
+- **io**: `--multicast-interface <name|IPv4>` joins the multicast group (`--multicast`) on that interface instead of the system's choice (the default route's), for a host with several networks. It is checked before anything is sent (exit 3): it needs `--multicast` and an interface of this host, by name or by an IPv4 address of it.
+- **io**: `--route`, as `forward-open` has it: the Forward_Open goes through the target to a device behind it (`1/3`, slot 3 of its backplane). As for the other commands that change a device, it is taken only from the command line: with `ETHERNETIPCTL_ROUTE` set and no `--route`, one line on stderr says the variable is not used. Not tried against a chassis.
+- **io**, **forward-open**: `--key vendor/device-type/product-code/major.minor` puts an electronic key first in the connection path (a field at 0 is not checked), and `--key-compatible` sets its compatibility bit. A target that is another device refuses the connection with the Connection Manager's status (exit 6, e.g. extended status 0x0114, vendor ID or product code mismatch).
+- **adapter**: a model's tag takes `access`: `read-write` (the default), `read-only` or `none`, as a Logix tag's External Access, with go-ethernetip's `TagServer.CheckRead` and `CheckWrite`. A refused read or write is answered with `logix.access_status` (default 0x0F, privilege violation; which status a controller answers is not taken from a recording) and logged as a `tag-refused` event (`service`, `tag`, `status`), with no `tag-write`. An `access` that is none of the three is refused as `invalid_config` (exit 3).
+
+### Tests
+
+- `TestIOMulticastInterface`: inputs by multicast arrive on the loopback interface named by name and by address, where the endpoint's own choice gets none (skipped where loopback multicast does not work, as on most Linux runners); `TestIOMulticastInterfaceRefused`: the forms refused before anything is sent.
+- `TestIOAndForwardOpenElectronicKey`: the key in the path, accepted (exact, zero fields, compatible) and refused (revision, vendor, device type), and the malformed forms.
+- `TestIORoute`: `--route` reached and refused, a malformed route, and `ETHERNETIPCTL_ROUTE` not used.
+- `TestAdapterTagAccess`: read-only and no-access tags by name, program-scoped and case-insensitive, the events, the model's status and a malformed access.
+
+---
+
 ## v0.9.2
 
 **Date:** 2026-11-20

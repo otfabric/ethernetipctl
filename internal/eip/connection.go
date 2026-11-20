@@ -8,6 +8,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"math"
+	"strconv"
 	"strings"
 	"time"
 
@@ -91,8 +92,47 @@ func connectionPath(p config.ConnectionPathConfig, configData []byte) (cip.Path,
 	return path, nil
 }
 
+// electronicKey parses --key and --key-compatible; nil without --key.
+func electronicKey(c config.IOConnConfig) (*cip.KeySegment, error) {
+	s := strings.TrimSpace(c.Key)
+	if s == "" {
+		if c.KeyCompatible {
+			return nil, invalid(errs.CodeInvalidInput, "--key-compatible needs --key")
+		}
+		return nil, nil
+	}
+	bad := func(why string) error {
+		return invalid(errs.CodeInvalidValue, "invalid --key %s: %s (vendor/device-type/product-code/major.minor, e.g. 1/12/65001/2.3)", s, why)
+	}
+	parts := strings.Split(s, "/")
+	if len(parts) != 4 {
+		return nil, bad("four parts separated by /")
+	}
+	var ids [3]uint16
+	for i, what := range []string{"vendor", "device type", "product code"} {
+		n, err := strconv.ParseUint(strings.TrimSpace(parts[i]), 0, 16)
+		if err != nil {
+			return nil, bad(what + " is not a number from 0 to 65535")
+		}
+		ids[i] = uint16(n)
+	}
+	maj, minor, ok := strings.Cut(strings.TrimSpace(parts[3]), ".")
+	if !ok {
+		return nil, bad("the revision is major.minor")
+	}
+	ma, err1 := strconv.ParseUint(maj, 10, 7)
+	mi, err2 := strconv.ParseUint(minor, 10, 8)
+	if err1 != nil || err2 != nil {
+		return nil, bad("the major revision is 0 to 127, the minor 0 to 255")
+	}
+	return &cip.KeySegment{VendorID: ids[0], DeviceType: ids[1], ProductCode: ids[2], Major: uint8(ma), Minor: uint8(mi), Compatible: c.KeyCompatible}, nil
+}
+
 // checkIO validates the description of an I/O connection.
 func checkIO(c config.IOConnConfig) ([]byte, error) {
+	if _, err := electronicKey(c); err != nil {
+		return nil, err
+	}
 	var data []byte
 	if c.ConfigData != "" {
 		var err error
@@ -113,8 +153,15 @@ func checkIO(c config.IOConnConfig) ([]byte, error) {
 	case int(c.InputSize) > maxInputSize:
 		return nil, invalid(errs.CodeInvalidValue, "invalid --input-size %d: at most %d", c.InputSize, maxInputSize)
 	}
-	if _, err := connectionPath(c.ConnectionPathConfig, data); err != nil {
+	path, err := connectionPath(c.ConnectionPathConfig, data)
+	if err != nil {
 		return nil, err
+	}
+	if key, _ := electronicKey(c); key != nil {
+		// The key goes first in the path, which Forward_Open sizes in one octet of words.
+		if _, err := append(cip.Path{*key}, path...).Words(); err != nil {
+			return nil, invalid(errs.CodeInvalidValue, "--config-data has %d octets: with --key, the connection path holds at most 255 words", len(data))
+		}
 	}
 	return data, nil
 }
@@ -180,6 +227,9 @@ func (e Env) ForwardOpen(ctx context.Context, host string, cfg config.ForwardOpe
 	route, _ := ParseRoute(cfg.Route)
 	configData, _ := checkIO(cfg.IOConnConfig)
 	path, _ := connectionPath(cfg.ConnectionPathConfig, configData)
+	if key, _ := electronicKey(cfg.IOConnConfig); key != nil {
+		path = append(cip.Path{*key}, path...)
+	}
 	tr := triad(cfg.TriadConfig)
 	c, err := e.dial(ctx, t, route)
 	if err != nil {
